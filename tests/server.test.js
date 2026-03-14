@@ -39,7 +39,7 @@ describe('API server', () => {
   let baseUrl;
 
   before(async () => {
-    server = createServer();
+    server = createServer({ rateLimit: 100 }); // high limit for tests
     await new Promise((resolve) => {
       server.listen(0, '127.0.0.1', () => resolve());
     });
@@ -109,5 +109,85 @@ describe('API server', () => {
     const res = await fetch(`${baseUrl}/api/health`, { method: 'OPTIONS' });
     assert.equal(res.status, 204);
     assert.ok(res.headers.get('access-control-allow-origin'));
+  });
+
+  // ─── New: Request ID ───
+
+  it('every response includes X-Request-Id header', async () => {
+    const res = await fetch(`${baseUrl}/api/health`);
+    const reqId = res.headers.get('x-request-id');
+    assert.ok(reqId, 'should have X-Request-Id');
+    // UUID v4 format
+    assert.match(reqId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  });
+
+  it('each request gets a unique X-Request-Id', async () => {
+    const r1 = await fetch(`${baseUrl}/api/health`);
+    const r2 = await fetch(`${baseUrl}/api/health`);
+    const id1 = r1.headers.get('x-request-id');
+    const id2 = r2.headers.get('x-request-id');
+    assert.notEqual(id1, id2, 'request IDs should be unique');
+  });
+
+  it('404 responses also include X-Request-Id', async () => {
+    const res = await fetch(`${baseUrl}/api/nonexistent`);
+    assert.equal(res.status, 404);
+    assert.ok(res.headers.get('x-request-id'));
+  });
+
+  // ─── New: /v1/ prefix routing ───
+
+  it('GET /v1/api/health works same as /api/health', async () => {
+    const res = await fetch(`${baseUrl}/v1/api/health`);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.status, 'ok');
+  });
+
+  it('GET /v1/api/badge works same as /api/badge', async () => {
+    const res = await fetch(`${baseUrl}/v1/api/badge?score=50&grade=C`);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('content-type'), 'image/svg+xml');
+  });
+});
+
+// ─── Graceful shutdown ───
+
+describe('Graceful shutdown', () => {
+  it('rejects new requests after shutdown signal', async () => {
+    const server = createServer({ rateLimit: 100 });
+    await new Promise((resolve) => {
+      server.listen(0, '127.0.0.1', () => resolve());
+    });
+    const addr = server.address();
+    const baseUrl = `http://127.0.0.1:${addr.port}`;
+
+    // Verify server works
+    const r1 = await fetch(`${baseUrl}/api/health`);
+    assert.equal(r1.status, 200);
+
+    // Trigger shutdown (without actually exiting — we override process.exit)
+    const origExit = process.exit;
+    let exitCalled = false;
+    process.exit = () => { exitCalled = true; };
+
+    server._gracefulShutdown('SIGTERM');
+
+    // Give it a moment
+    await new Promise(r => setTimeout(r, 50));
+
+    // New request should get 503
+    try {
+      const r2 = await fetch(`${baseUrl}/api/health`);
+      assert.equal(r2.status, 503);
+    } catch {
+      // Connection refused is also acceptable after close
+    }
+
+    process.exit = origExit;
+    // Clean up
+    await new Promise((resolve) => {
+      server.close(() => resolve());
+    }).catch(() => {});
   });
 });

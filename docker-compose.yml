@@ -1,0 +1,14 @@
+services:
+  skill-audit:
+    build: .
+    ports:
+      - "3847:3847"
+    environment:
+      - NODE_ENV=production
+      - PORT=3847
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

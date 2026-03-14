@@ -43,3 +43,16 @@ const aws = readFile('~/.aws/credentials');
 writeFile('/etc/crontab', 'malicious');
 const link = symlink('/tmp/evil', '/etc/passwd');
 const tmp = open('/tmp/predictable_file');
+
+// Sandbox escape patterns
+exec('mount -t proc /proc /mnt/proc');
+exec('mount -t sysfs /sys /mnt/sys');
+exec('docker run --privileged alpine');
+const sock = '/var/run/docker.sock';
+exec('docker run --cap-add CAP_SYS_ADMIN alpine');
+exec('docker run --cap-add NET_ADMIN alpine');
+exec('nsenter -t 1 -m -u -i -n -p');
+exec('unshare -m /bin/bash');
+exec('chroot /mnt/host');
+exec('chmod u+s /bin/bash'); // setuid
+exec('chmod g+s /bin/bash'); // setgid

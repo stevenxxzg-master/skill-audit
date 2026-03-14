@@ -32,11 +32,28 @@ main{width:100%;max-width:720px;padding:32px 24px}
 .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:.9rem;font-weight:600;cursor:pointer;transition:opacity .2s}
 .btn:hover{opacity:.85}
 .btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{background:var(--surface2);color:var(--text)}
 
-/* Loading */
+/* Loading / Skeleton */
 .loading{display:none;text-align:center;padding:48px 0}
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+.skeleton{display:none;padding:24px 0}
+.skeleton-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin-bottom:24px}
+.skeleton-line{height:14px;background:var(--surface2);border-radius:6px;margin-bottom:12px;animation:pulse 1.5s ease-in-out infinite}
+.skeleton-line.w60{width:60%}
+.skeleton-line.w80{width:80%}
+.skeleton-line.w40{width:40%}
+.skeleton-circle{width:120px;height:120px;border-radius:50%;background:var(--surface2);margin:0 auto 20px;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Error banner */
+.error-banner{display:none;background:rgba(239,68,68,.1);border:1px solid var(--danger);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;color:var(--danger);font-size:.9rem}
+.error-banner .error-title{font-weight:600;margin-bottom:4px}
+.error-banner .error-detail{color:var(--text2);font-size:.8rem}
+.error-banner .error-dismiss{float:right;cursor:pointer;font-size:1.1rem;line-height:1;opacity:.6}
+.error-banner .error-dismiss:hover{opacity:1}
 
 /* Results */
 .results{display:none}
@@ -56,6 +73,9 @@ main{width:100%;max-width:720px;padding:32px 24px}
 .stats{display:flex;justify-content:center;gap:24px;margin-top:16px;color:var(--text2);font-size:.85rem}
 .stats span b{color:var(--text)}
 
+/* Download buttons */
+.download-row{display:flex;justify-content:center;gap:8px;margin-top:16px}
+
 /* Findings */
 .findings{margin-top:24px}
 .file-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
@@ -69,16 +89,37 @@ main{width:100%;max-width:720px;padding:32px 24px}
 .sev-warn{background:var(--warn)}
 .finding-line{color:var(--text2);font-size:.8rem}
 .finding-msg{font-weight:500}
+.finding-rule{color:var(--accent);cursor:pointer;font-size:.8rem;text-decoration:underline;margin-left:auto;white-space:nowrap}
 .finding-snippet{background:var(--surface2);border-radius:6px;padding:8px 12px;margin-top:8px;font-family:'SF Mono',Monaco,monospace;font-size:.8rem;color:var(--text2);overflow-x:auto;white-space:pre}
 .finding-fix{margin-top:6px;font-size:.8rem;color:var(--text2);font-style:italic}
 
 /* Empty */
 .empty{text-align:center;padding:48px 0;color:var(--pass);font-size:1.1rem}
 
+/* History */
+.history-section{margin-top:32px;border-top:1px solid var(--border);padding-top:24px}
+.history-section h3{font-size:1rem;margin-bottom:12px;color:var(--text2)}
+.history-list{list-style:none}
+.history-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:.85rem;cursor:pointer;transition:background .15s}
+.history-item:hover{background:var(--surface2)}
+.history-item .hi-left{display:flex;align-items:center;gap:10px}
+.history-item .hi-grade{font-weight:700;width:28px}
+.history-item .hi-name{color:var(--text)}
+.history-item .hi-time{color:var(--text2);font-size:.75rem}
+.history-clear{background:none;border:none;color:var(--text2);font-size:.8rem;cursor:pointer;margin-top:4px}
+.history-clear:hover{color:var(--danger)}
+
+/* Rule dialog */
+dialog{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:480px;width:90%}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog h3{margin-bottom:12px;font-size:1.1rem}
+dialog p{font-size:.9rem;line-height:1.5;color:var(--text2);margin-bottom:8px}
+dialog .close-btn{margin-top:12px}
+
 /* Footer */
 footer{padding:32px 24px;color:var(--text2);font-size:.8rem;text-align:center}
 
-@media(max-width:600px){header h1{font-size:1.5rem}.score-ring{width:110px;height:110px}.score-num{font-size:1.8rem}.stats{flex-direction:column;gap:8px}}
+@media(max-width:600px){header h1{font-size:1.5rem}.score-ring{width:110px;height:110px}.score-num{font-size:1.8rem}.stats{flex-direction:column;gap:8px}.download-row{flex-direction:column}}
 </style>
 </head>
 <body>
@@ -91,6 +132,12 @@ footer{padding:32px 24px;color:var(--text2);font-size:.8rem;text-align:center}
 </header>
 
 <main>
+  <div class="error-banner" id="errorBanner">
+    <span class="error-dismiss" onclick="dismissError()">✕</span>
+    <div class="error-title" id="errorTitle">Error</div>
+    <div class="error-detail" id="errorDetail"></div>
+  </div>
+
   <div id="upload-section">
     <div class="upload-zone" id="dropzone">
       <h3>📦 Drop a skill package here</h3>
@@ -109,6 +156,20 @@ footer{padding:32px 24px;color:var(--text2);font-size:.8rem;text-align:center}
     <p>Scanning skill for security issues...</p>
   </div>
 
+  <div class="skeleton" id="skeleton">
+    <div class="skeleton-card">
+      <div class="skeleton-circle"></div>
+      <div class="skeleton-line w60" style="margin:0 auto"></div>
+      <div class="skeleton-line w40" style="margin:8px auto 0"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton-line w80"></div>
+      <div class="skeleton-line w60"></div>
+      <div class="skeleton-line w80"></div>
+      <div class="skeleton-line w40"></div>
+    </div>
+  </div>
+
   <div class="results" id="results">
     <div class="score-card">
       <div class="score-ring">
@@ -124,13 +185,29 @@ footer{padding:32px 24px;color:var(--text2);font-size:.8rem;text-align:center}
         <span><b id="statDanger">0</b> danger</span>
         <span><b id="statWarn">0</b> warnings</span>
       </div>
+      <div class="download-row" id="downloadRow" style="display:none">
+        <button class="btn btn-secondary" onclick="downloadJSON()">⬇ Download JSON</button>
+        <button class="btn btn-secondary" onclick="downloadHTML()">⬇ Download HTML</button>
+      </div>
     </div>
     <div class="findings" id="findings"></div>
     <div style="text-align:center;margin-top:16px">
       <button class="btn" onclick="reset()" style="background:var(--surface2);color:var(--text)">Scan another</button>
     </div>
   </div>
+
+  <div class="history-section" id="historySection" style="display:none">
+    <h3>📋 Recent Scans</h3>
+    <ul class="history-list" id="historyList"></ul>
+    <button class="history-clear" onclick="clearHistory()">Clear history</button>
+  </div>
 </main>
+
+<dialog id="ruleDialog">
+  <h3 id="ruleDialogTitle"></h3>
+  <p id="ruleDialogDesc"></p>
+  <button class="btn btn-secondary close-btn" onclick="document.getElementById('ruleDialog').close()">Close</button>
+</dialog>
 
 <footer>
   <a href="https://github.com/stevenxxzg-master/skill-audit">GitHub</a> · MIT License
@@ -138,13 +215,56 @@ footer{padding:32px 24px;color:var(--text2);font-size:.8rem;text-align:center}
 
 <script>
 const $ = s => document.querySelector(s);
+
+const RULE_DESCRIPTIONS = {
+  'dangerous-commands': 'Detects dangerous shell commands like rm -rf, eval(), exec(), dd, mkfs, and other patterns that could cause data loss or arbitrary code execution.',
+  'secret-leaks': 'Scans for hardcoded secrets, API keys, tokens, passwords, and other sensitive credentials that should not be committed to source control.',
+  'prompt-injection': 'Identifies prompt injection patterns that could manipulate AI agent behavior, including system prompt overrides and jailbreak attempts.',
+  'suspicious-network': 'Flags suspicious network operations like connections to unusual ports, raw socket usage, DNS exfiltration patterns, and unauthorized outbound requests.',
+  'file-system-audit': 'Checks for risky file system operations including writes to sensitive paths (/etc, /root), path traversal patterns, and symlink attacks.',
+  'permission-audit': 'Reviews permission-related issues such as overly permissive file modes, privilege escalation attempts, and sudo/setuid usage.',
+  'dependency-audit': 'Analyzes dependencies for known vulnerabilities, typosquatting risks, and suspicious package sources.',
+  'encoding-audit': 'Detects encoding-based obfuscation techniques like base64-encoded commands, hex-encoded payloads, and Unicode tricks used to hide malicious code.',
+  'supply-chain-audit': 'Examines supply chain risks including install scripts, postinstall hooks, and dependency confusion patterns.',
+  'sandbox-escape': 'Detects container/sandbox escape patterns including mount of /proc or /sys, --privileged flags, capability escalation, and namespace manipulation.',
+  'config-audit': 'Checks configuration files for insecure settings like debug mode enabled, CORS wildcard, TLS/SSL disabled, and verbose logging that may leak secrets.',
+};
+
 const dropzone = $('#dropzone');
 const fileInput = $('#fileInput');
+let lastReport = null;
 
 // Theme
 function toggleTheme() {
   const html = document.documentElement;
   html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+
+// Error handling
+function showError(title, detail) {
+  $('#errorTitle').textContent = title;
+  $('#errorDetail').textContent = detail || '';
+  $('#errorBanner').style.display = 'block';
+}
+function dismissError() {
+  $('#errorBanner').style.display = 'none';
+}
+
+function classifyError(err, status) {
+  if (status === 429) return { title: '⏳ Too many requests', detail: 'Rate limit exceeded. Please wait a moment and try again.' };
+  if (status === 503) return { title: '🔧 Service busy', detail: 'Server is handling too many scans. Try again in a few seconds.' };
+  if (err.name === 'AbortError' || err.message?.includes('timeout')) return { title: '⏱ Request timed out', detail: 'The scan took too long. Try a smaller skill package.' };
+  if (err.name === 'TypeError' && err.message?.includes('fetch')) return { title: '🌐 Network error', detail: 'Could not reach the server. Check your connection and try again.' };
+  return { title: '❌ Scan failed', detail: err.message || 'An unexpected error occurred.' };
+}
+
+// Sections
+function showSection(id) {
+  ['upload-section','loading','skeleton','results'].forEach(s => {
+    $('#'+s).style.display = s === id ? '' : 'none';
+  });
+  if (id === 'loading') $('#skeleton').style.display = 'block';
+  dismissError();
 }
 
 // Drag & drop
@@ -154,32 +274,54 @@ dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover
 dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); if(e.dataTransfer.files[0]) scanFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', () => { if(fileInput.files[0]) scanFile(fileInput.files[0]); });
 
-function show(id) { ['upload-section','loading','results'].forEach(s => { $(('#'+s)).style.display = s===id ? '' : 'none'; }); }
-
 async function scanFile(file) {
-  show('loading');
+  showSection('loading');
   try {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch('/api/scan', { method: 'POST', body: form });
-    if (!res.ok) throw new Error(await res.text());
-    render(await res.json());
-  } catch(e) { alert('Scan failed: ' + e.message); show('upload-section'); }
+    if (!res.ok) {
+      const info = classifyError(new Error(await res.text().catch(() => '')), res.status);
+      showError(info.title, info.detail);
+      showSection('upload-section');
+      return;
+    }
+    const report = await res.json();
+    lastReport = report;
+    render(report);
+    saveToHistory(file.name, report);
+  } catch(e) {
+    const info = classifyError(e);
+    showError(info.title, info.detail);
+    showSection('upload-section');
+  }
 }
 
 async function scanUrl() {
   const url = $('#urlInput').value.trim();
   if (!url) return;
-  show('loading');
+  showSection('loading');
   try {
     const res = await fetch('/api/scan-url', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) });
-    if (!res.ok) throw new Error(await res.text());
-    render(await res.json());
-  } catch(e) { alert('Scan failed: ' + e.message); show('upload-section'); }
+    if (!res.ok) {
+      const info = classifyError(new Error(await res.text().catch(() => '')), res.status);
+      showError(info.title, info.detail);
+      showSection('upload-section');
+      return;
+    }
+    const report = await res.json();
+    lastReport = report;
+    render(report);
+    saveToHistory(url, report);
+  } catch(e) {
+    const info = classifyError(e);
+    showError(info.title, info.detail);
+    showSection('upload-section');
+  }
 }
 
 function render(report) {
-  show('results');
+  showSection('results');
   const score = report.score?.score ?? 100;
   const grade = report.score?.grade ?? 'A';
   const findings = report.findings || [];
@@ -207,6 +349,9 @@ function render(report) {
   $('#statDanger').textContent = summary.danger || 0;
   $('#statWarn').textContent = summary.warn || 0;
 
+  // Show download buttons
+  $('#downloadRow').style.display = 'flex';
+
   // Findings
   const container = $('#findings');
   container.innerHTML = '';
@@ -224,18 +369,20 @@ function render(report) {
     const dangers = items.filter(i => i.severity === 'danger').length;
     const warns = items.filter(i => i.severity === 'warn').length;
     group.innerHTML = `<div class="file-header" onclick="this.parentElement.classList.toggle('collapsed')">
-      <span>${file}</span>
+      <span>${esc(file)}</span>
       <span class="count">${dangers ? dangers + ' danger' : ''} ${warns ? warns + ' warn' : ''}</span>
     </div>`;
     const body = document.createElement('div');
     body.className = 'file-body';
     items.forEach(item => {
+      const ruleId = item.rule || '';
       const div = document.createElement('div');
       div.className = 'finding';
       div.innerHTML = `<div class="finding-head">
         <span class="sev sev-${item.severity}"></span>
         <span class="finding-line">L${item.line}</span>
         <span class="finding-msg">${esc(item.msg)}</span>
+        ${ruleId ? `<span class="finding-rule" onclick="showRuleInfo('${esc(ruleId)}')">${esc(ruleId)}</span>` : ''}
       </div>
       ${item.snippet ? `<div class="finding-snippet">${esc(item.snippet)}</div>` : ''}
       ${item.suggestion ? `<div class="finding-fix">💡 ${esc(item.suggestion)}</div>` : ''}`;
@@ -246,8 +393,102 @@ function render(report) {
   });
 }
 
+// Rule info dialog
+function showRuleInfo(ruleId) {
+  const dialog = $('#ruleDialog');
+  $('#ruleDialogTitle').textContent = ruleId;
+  $('#ruleDialogDesc').textContent = RULE_DESCRIPTIONS[ruleId] || 'No description available for this rule.';
+  dialog.showModal();
+}
+
+// Download
+function downloadJSON() {
+  if (!lastReport) return;
+  const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, 'skill-audit-report.json');
+}
+
+function downloadHTML() {
+  if (!lastReport) return;
+  const score = lastReport.score?.score ?? 0;
+  const grade = lastReport.score?.grade ?? '?';
+  const findings = lastReport.findings || [];
+  let rows = findings.map(f =>
+    `<tr><td>${esc(f.file)}</td><td>${f.line}</td><td>${esc(f.severity)}</td><td>${esc(f.msg)}</td><td>${esc(f.rule||'')}</td></tr>`
+  ).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>skill-audit report</title>
+<style>body{font-family:sans-serif;max-width:800px;margin:40px auto;padding:0 20px}
+table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+th{background:#f5f5f5}.danger{color:#e05d44}.warn{color:#dfb317}</style></head>
+<body><h1>skill-audit Report</h1><p>Score: <b>${score}</b> | Grade: <b>${grade}</b> | Findings: <b>${findings.length}</b></p>
+<table><tr><th>File</th><th>Line</th><th>Severity</th><th>Message</th><th>Rule</th></tr>${rows}</table></body></html>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  downloadBlob(blob, 'skill-audit-report.html');
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// History (localStorage)
+const HISTORY_KEY = 'skill-audit-history';
+const MAX_HISTORY = 10;
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; }
+}
+
+function saveToHistory(name, report) {
+  const history = loadHistory();
+  history.unshift({
+    name: name.length > 60 ? name.slice(0, 57) + '...' : name,
+    score: report.score?.score ?? 0,
+    grade: report.score?.grade ?? '?',
+    findings: (report.findings || []).length,
+    time: new Date().toISOString(),
+    report,
+  });
+  if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = loadHistory();
+  const section = $('#historySection');
+  const list = $('#historyList');
+  if (history.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  list.innerHTML = '';
+  history.forEach((h, i) => {
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    li.onclick = () => { lastReport = h.report; render(h.report); };
+    const gradeColor = {A:'var(--pass)',B:'#84cc16',C:'var(--warn)',D:'#f97316',F:'var(--danger)'}[h.grade] || 'var(--text2)';
+    const timeStr = new Date(h.time).toLocaleString();
+    li.innerHTML = `<div class="hi-left">
+      <span class="hi-grade" style="color:${gradeColor}">${esc(h.grade)}</span>
+      <span class="hi-name">${esc(h.name)}</span>
+    </div>
+    <span class="hi-time">${esc(timeStr)}</span>`;
+    list.appendChild(li);
+  });
+}
+
+function clearHistory() {
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+}
+
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function reset() { show('upload-section'); $('#urlInput').value = ''; fileInput.value = ''; }
+function reset() { showSection('upload-section'); $('#urlInput').value = ''; fileInput.value = ''; lastReport = null; $('#downloadRow').style.display = 'none'; }
+
+// Init
+renderHistory();
 </script>
 </body>
 </html>

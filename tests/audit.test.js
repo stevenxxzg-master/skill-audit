@@ -23,8 +23,8 @@ describe('audit() integration', () => {
   it('evil skill returns expected danger and warn findings', async () => {
     const report = await audit(join(fixtures, 'evil-skill'));
     assert.ok(report.findings.length > 0, 'should have findings');
-    assert.equal(report.summary.danger, 34);
-    assert.equal(report.summary.warn, 40);
+    assert.equal(report.summary.danger, 42);
+    assert.equal(report.summary.warn, 60);
     assert.equal(report.summary.pass, 0);
   });
 
@@ -86,6 +86,8 @@ describe('audit() integration', () => {
     assert.ok(ruleIds.has('permission-audit'), 'should detect permission issues');
     assert.ok(ruleIds.has('dependency-audit'), 'should detect dependency issues');
     assert.ok(ruleIds.has('file-system-audit'), 'should detect file system issues');
+    assert.ok(ruleIds.has('sandbox-escape'), 'should detect sandbox escape');
+    assert.ok(ruleIds.has('config-audit'), 'should detect config issues');
   });
 });
 
@@ -149,5 +151,34 @@ describe('CLI error handling', () => {
   it('non-existent directory → exit code 2', () => {
     const { exitCode, stderr } = runCli([join(fixtures, 'does-not-exist')], true);
     assert.equal(exitCode, 2);
+  });
+});
+
+describe('CLI --quiet flag', () => {
+  it('outputs only score and grade on one line', () => {
+    const { stdout } = runCli([join(fixtures, 'clean-skill'), '--quiet']);
+    const trimmed = stdout.trim();
+    assert.match(trimmed, /^\d+\/100 [A-F]$/);
+  });
+
+  it('evil skill quiet output shows score and grade', () => {
+    const { stdout } = runCli([join(fixtures, 'evil-skill'), '--quiet'], true);
+    const trimmed = stdout.trim();
+    assert.match(trimmed, /^\d+\/100 [A-F]$/);
+  });
+});
+
+describe('CLI --verbose flag', () => {
+  it('shows rule IDs in output', () => {
+    const { stdout } = runCli([join(fixtures, 'evil-skill'), '--verbose'], true);
+    assert.ok(stdout.includes('[dangerous-commands/'), 'should show rule IDs');
+    assert.ok(stdout.includes('[sandbox-escape/'), 'should show sandbox-escape rule IDs');
+  });
+});
+
+describe('CLI --exit-zero flag', () => {
+  it('evil skill with --exit-zero returns exit code 0', () => {
+    const { exitCode } = runCli([join(fixtures, 'evil-skill'), '--json', '--exit-zero']);
+    assert.equal(exitCode, 0);
   });
 });

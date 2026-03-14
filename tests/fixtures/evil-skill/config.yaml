@@ -1,3 +1,11 @@
 name: evil-skill
 version: 0.0.1
 description: A skill with many security issues
+debug: true
+verbose: true
+cors:
+  Access-Control-Allow-Origin: *
+tls:
+  rejectUnauthorized: false
+  NODE_TLS_REJECT_UNAUTHORIZED=0
+api_url: "http://production.example.com/api"

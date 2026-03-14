@@ -180,6 +180,9 @@ if (!target || flags.has('--help') || flags.has('-h')) {
     --lang zh          Chinese fix suggestions (default: en)
     --save             Save scan result to .skill-audit/ history
     --diff             Compare with previous scan (auto-loads latest)
+    --verbose          Show rule ID for each finding
+    --quiet            Output only score and grade (one line)
+    --exit-zero        Always exit 0 even if danger findings exist
     -h, --help         Show this help
 
   Examples:
@@ -198,6 +201,9 @@ const htmlMode = flags.has('--html');
 const markdownMode = flags.has('--markdown');
 const saveMode = flags.has('--save');
 const diffMode = flags.has('--diff');
+const verboseMode = flags.has('--verbose');
+const quietMode = flags.has('--quiet');
+const exitZero = flags.has('--exit-zero');
 const outputPath = getArg('--output', '-o');
 let lang = 'en';
 const langVal = getArg('--lang', null);
@@ -218,7 +224,9 @@ try {
     }
   }
 
-  if (htmlMode) {
+  if (quietMode) {
+    console.log(`${scoreResult.score}/100 ${scoreResult.grade}`);
+  } else if (htmlMode) {
     const html = generateHtml(report, { lang });
     if (outputPath) {
       await writeFile(resolve(outputPath), html, 'utf-8');
@@ -248,6 +256,14 @@ try {
     }
   } else {
     formatReport(report, { lang, previousReport });
+    if (verboseMode && report.findings.length > 0) {
+      console.log(`  ${COLORS.dim}Rule IDs:${COLORS.reset}`);
+      for (const f of report.findings) {
+        const color = f.severity === 'danger' ? COLORS.red : COLORS.yellow;
+        console.log(`    ${color}${f.severity}${COLORS.reset} ${COLORS.dim}${f.file}:${f.line}${COLORS.reset} [${f.rule}]`);
+      }
+      console.log();
+    }
   }
 
   // Save after display (so the current scan becomes "latest" for next time)
@@ -256,7 +272,7 @@ try {
     console.log(`\x1b[32m✓ Scan saved to ${saved.path}\x1b[0m`);
   }
 
-  process.exit(report.summary.danger > 0 ? 1 : 0);
+  process.exit(exitZero ? 0 : (report.summary.danger > 0 ? 1 : 0));
 } catch (err) {
   console.error(`\x1b[31m✗ Error: ${err.message}\x1b[0m`);
   process.exit(2);

@@ -12,6 +12,28 @@ const SECRET_PATTERNS = [
   { pattern: /Bearer\s+[A-Za-z0-9_\-\.]{20,}/g, id: 'bearer-token', msg: 'Bearer token in code', severity: 'warn' },
 ];
 
+// Words that indicate placeholder/example values — skip these lines
+// Use looser boundary to catch underscore-separated tokens like "example_key"
+const FALSE_POSITIVE_WORDS = /(?:^|[\s'"=:_\-/])(example|placeholder|dummy|test|sample|xxx)(?:[\s'"=:_\-/]|$)/i;
+
+// Files that are inherently example/template files
+const SKIP_FILES = new Set(['.env.example', '.env.sample', '.env.template']);
+
+/**
+ * Check if a line is inside a markdown code block example in README files
+ */
+function isInReadmeCodeBlock(lines, lineIndex, file) {
+  if (!/readme\.md$/i.test(file.rel)) return false;
+  // Walk backwards to find if we're inside a ``` block
+  let inCodeBlock = false;
+  for (let i = 0; i < lineIndex; i++) {
+    if (/^```/.test(lines[i].trim())) {
+      inCodeBlock = !inCodeBlock;
+    }
+  }
+  return inCodeBlock;
+}
+
 export const secretLeaks = {
   id: 'secret-leaks',
   name: 'Secret & Credential Leaks',
@@ -19,12 +41,21 @@ export const secretLeaks = {
     // Skip common false-positive files
     if (file.rel === 'package-lock.json' || file.rel === 'yarn.lock') return [];
 
+    // Skip .env.example and similar template files
+    const basename = file.rel.split('/').pop();
+    if (SKIP_FILES.has(basename)) return [];
+
     const findings = [];
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       // Skip comments that look like examples
       if (/^\s*(#|\/\/)\s*(example|todo|fixme|placeholder)/i.test(line)) continue;
+      // Skip lines containing placeholder/example words
+      if (FALSE_POSITIVE_WORDS.test(line)) continue;
+      // Skip lines inside README code blocks
+      if (isInReadmeCodeBlock(lines, i, file)) continue;
+
       for (const { pattern, id, msg, severity } of SECRET_PATTERNS) {
         pattern.lastIndex = 0;
         if (pattern.test(line)) {
