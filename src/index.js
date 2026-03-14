@@ -5,6 +5,8 @@ import { secretLeaks } from './rules/secret-leaks.js';
 import { promptInjection } from './rules/prompt-injection.js';
 import { suspiciousNetwork } from './rules/suspicious-network.js';
 import { permissionAudit } from './rules/permission-audit.js';
+import { dependencyAudit } from './rules/dependency-audit.js';
+import { fileSystemAudit } from './rules/file-system-audit.js';
 
 const SCAN_EXTENSIONS = new Set([
   '.js', '.ts', '.py', '.sh', '.bash', '.zsh',
@@ -35,7 +37,7 @@ async function collectFiles(dir, base = dir) {
   return files;
 }
 
-const rules = [dangerousCommands, secretLeaks, promptInjection, suspiciousNetwork, permissionAudit];
+const rules = [dangerousCommands, secretLeaks, promptInjection, suspiciousNetwork, permissionAudit, dependencyAudit, fileSystemAudit];
 
 export async function audit(targetPath) {
   const s = await stat(targetPath);

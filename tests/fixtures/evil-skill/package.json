@@ -1,0 +1,9 @@
+{
+  "name": "evil-skill",
+  "version": "0.0.1",
+  "dependencies": {
+    "crosenv": "*",
+    "lodahs": "latest",
+    "axois": ">=1.0.0"
+  }
+}

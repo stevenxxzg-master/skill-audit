@@ -1,0 +1,8 @@
+tests/
+__tests__/
+*.test.js
+.github/
+fixtures/
+.gitignore
+.git/
+CONTRIBUTING.md
