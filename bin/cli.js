@@ -4,6 +4,7 @@ import { readFile, writeFile } from 'fs/promises';
 import { audit } from '../src/index.js';
 import { formatReport } from '../src/reporter.js';
 import { generateHtml } from '../src/html-reporter.js';
+import { generateMarkdown } from '../src/markdown-reporter.js';
 import { calculateScore } from '../src/scorer.js';
 import { diffReports } from '../src/diff.js';
 import { saveReport, loadHistory, getLatest } from '../src/history.js';
@@ -162,6 +163,7 @@ if (!target || flags.has('--help') || flags.has('-h')) {
     skill-audit <path>                        Scan a skill directory
     skill-audit <path> --json                 Output JSON report
     skill-audit <path> --html -o report.html  Output HTML report
+    skill-audit <path> --markdown             Output Markdown report
     skill-audit <path> --lang zh              Show fix suggestions in Chinese
     skill-audit <path> --save                 Save scan result to history
     skill-audit <path> --diff                 Compare with last saved scan
@@ -173,6 +175,7 @@ if (!target || flags.has('--help') || flags.has('-h')) {
   Options:
     --json             Output JSON report
     --html             Output HTML report
+    --markdown         Output Markdown report (GitHub-friendly)
     --output, -o FILE  Output file path (used with --html or --json)
     --lang zh          Chinese fix suggestions (default: en)
     --save             Save scan result to .skill-audit/ history
@@ -192,6 +195,7 @@ if (!target || flags.has('--help') || flags.has('-h')) {
 
 const jsonMode = flags.has('--json');
 const htmlMode = flags.has('--html');
+const markdownMode = flags.has('--markdown');
 const saveMode = flags.has('--save');
 const diffMode = flags.has('--diff');
 const outputPath = getArg('--output', '-o');
@@ -221,6 +225,14 @@ try {
       console.log(`\x1b[32m✓ HTML report written to ${resolve(outputPath)}\x1b[0m`);
     } else {
       process.stdout.write(html);
+    }
+  } else if (markdownMode) {
+    const md = generateMarkdown(report, { lang });
+    if (outputPath) {
+      await writeFile(resolve(outputPath), md, 'utf-8');
+      console.log(`\x1b[32m✓ Markdown report written to ${resolve(outputPath)}\x1b[0m`);
+    } else {
+      process.stdout.write(md);
     }
   } else if (jsonMode) {
     const jsonData = { ...report, score: scoreResult };

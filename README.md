@@ -302,6 +302,62 @@ export const myRule = {
 
 然后在 `src/index.js` 的 `rules` 数组中注册即可。
 
+## Documentation
+
+详细文档请参阅 [`docs/`](./docs/) 目录：
+
+- [📋 规则总览](./docs/rules/index.md) — 所有规则的概览和链接
+- [📊 评分系统](./docs/scoring.md) — 评分算法、等级含义、如何提高分数
+- 各规则详情：
+  - [Dangerous Commands](./docs/rules/dangerous-commands.md)
+  - [Secret Leaks](./docs/rules/secret-leaks.md)
+  - [Prompt Injection](./docs/rules/prompt-injection.md)
+  - [Suspicious Network](./docs/rules/suspicious-network.md)
+  - [Permission Audit](./docs/rules/permission-audit.md)
+  - [Dependency Audit](./docs/rules/dependency-audit.md)
+  - [File System Audit](./docs/rules/file-system-audit.md)
+  - [Encoding Audit](./docs/rules/encoding-audit.md)
+  - [Supply Chain Audit](./docs/rules/supply-chain-audit.md)
+
+## GitHub Action
+
+在 CI 中集成 skill-audit，自动扫描 PR 中的安全问题：
+
+```yaml
+# .github/workflows/skill-audit.yml
+name: Skill Audit
+
+on: [push, pull_request]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx skill-audit . --json > audit-report.json
+      - name: Check score
+        run: |
+          SCORE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('audit-report.json','utf8')).score.score)")
+          echo "Security score: $SCORE"
+          if [ "$SCORE" -lt 70 ]; then
+            echo "::error::Security score $SCORE is below threshold (70)"
+            exit 1
+          fi
+```
+
+设置分数阈值（建议 70+），低于阈值时 CI 失败。
+
+## Used by
+
+> 🚧 如果你的项目使用了 skill-audit，欢迎提交 PR 添加到这里！
+
+<!--
+- [your-project](https://github.com/your/project) — 简短描述
+-->
+
 ## Contributing
 
 欢迎贡献！请参阅 [CONTRIBUTING.md](./CONTRIBUTING.md)。

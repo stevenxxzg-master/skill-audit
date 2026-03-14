@@ -266,7 +266,17 @@ export function createServer(options = {}) {
       } else if (method === 'GET' && url.startsWith('/api/badge')) {
         handleBadge(req, res, url);
       } else if (method === 'GET' && url === '/api/health') {
-        handleHealth(req, res);
+        await handleHealth(req, res);
+      } else if (method === 'GET' && (url === '/' || url === '/index.html')) {
+        // Serve web frontend
+        const webDir = join(__dirname, '..', 'web');
+        try {
+          const html = await readFile(join(webDir, 'index.html'), 'utf-8');
+          res.writeHead(200, { ...corsHeaders(), 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(html);
+        } catch {
+          jsonResponse(res, 404, { error: 'Web frontend not found' });
+        }
       } else {
         jsonResponse(res, 404, { error: 'Not found' });
       }

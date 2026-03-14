@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>skill-audit — Security Scanner for AI Agent Skills</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0a;--surface:#141414;--surface2:#1e1e1e;--border:#2a2a2a;--text:#e5e5e5;--text2:#888;--accent:#3b82f6;--danger:#ef4444;--warn:#f59e0b;--pass:#22c55e;--radius:12px}
+[data-theme="light"]{--bg:#fafafa;--surface:#fff;--surface2:#f5f5f5;--border:#e5e5e5;--text:#171717;--text2:#737373;--accent:#2563eb}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center}
+a{color:var(--accent);text-decoration:none}
+
+/* Header */
+header{width:100%;max-width:720px;padding:48px 24px 0;text-align:center}
+header h1{font-size:2rem;font-weight:700;letter-spacing:-0.5px}
+header h1 span{color:var(--accent)}
+header p{color:var(--text2);margin-top:8px;font-size:0.95rem}
+.theme-toggle{position:fixed;top:16px;right:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--text);font-size:1.1rem}
+
+/* Upload */
+main{width:100%;max-width:720px;padding:32px 24px}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:48px 24px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:rgba(59,130,246,.05)}
+.upload-zone h3{font-size:1.1rem;margin-bottom:8px}
+.upload-zone p{color:var(--text2);font-size:.85rem}
+.upload-zone input{display:none}
+.or{text-align:center;color:var(--text2);margin:16px 0;font-size:.85rem}
+.url-row{display:flex;gap:8px}
+.url-row input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:.9rem;outline:none}
+.url-row input:focus{border-color:var(--accent)}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:.9rem;font-weight:600;cursor:pointer;transition:opacity .2s}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Loading */
+.loading{display:none;text-align:center;padding:48px 0}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Results */
+.results{display:none}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;margin-bottom:24px}
+.score-ring{position:relative;width:140px;height:140px;margin:0 auto 16px}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring circle{fill:none;stroke-width:8}
+.score-ring .bg{stroke:var(--border)}
+.score-ring .fg{stroke-linecap:round;transition:stroke-dashoffset 1s ease}
+.score-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2.2rem;font-weight:700}
+.grade{display:inline-block;padding:4px 16px;border-radius:20px;font-weight:700;font-size:1.1rem;margin-top:8px}
+.grade-A{background:rgba(34,197,94,.15);color:var(--pass)}
+.grade-B{background:rgba(132,204,22,.15);color:#84cc16}
+.grade-C{background:rgba(245,158,11,.15);color:var(--warn)}
+.grade-D{background:rgba(249,115,22,.15);color:#f97316}
+.grade-F{background:rgba(239,68,68,.15);color:var(--danger)}
+.stats{display:flex;justify-content:center;gap:24px;margin-top:16px;color:var(--text2);font-size:.85rem}
+.stats span b{color:var(--text)}
+
+/* Findings */
+.findings{margin-top:24px}
+.file-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.file-header{padding:12px 16px;background:var(--surface2);font-size:.85rem;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.file-header .count{color:var(--text2);font-size:.8rem}
+.file-header:hover{background:var(--border)}
+.finding{padding:12px 16px;border-top:1px solid var(--border)}
+.finding-head{display:flex;align-items:center;gap:8px;font-size:.85rem}
+.sev{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sev-danger{background:var(--danger)}
+.sev-warn{background:var(--warn)}
+.finding-line{color:var(--text2);font-size:.8rem}
+.finding-msg{font-weight:500}
+.finding-snippet{background:var(--surface2);border-radius:6px;padding:8px 12px;margin-top:8px;font-family:'SF Mono',Monaco,monospace;font-size:.8rem;color:var(--text2);overflow-x:auto;white-space:pre}
+.finding-fix{margin-top:6px;font-size:.8rem;color:var(--text2);font-style:italic}
+
+/* Empty */
+.empty{text-align:center;padding:48px 0;color:var(--pass);font-size:1.1rem}
+
+/* Footer */
+footer{padding:32px 24px;color:var(--text2);font-size:.8rem;text-align:center}
+
+@media(max-width:600px){header h1{font-size:1.5rem}.score-ring{width:110px;height:110px}.score-num{font-size:1.8rem}.stats{flex-direction:column;gap:8px}}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+
+<header>
+  <h1><span>skill</span>-audit</h1>
+  <p>Security scanner for AI agent skills</p>
+</header>
+
+<main>
+  <div id="upload-section">
+    <div class="upload-zone" id="dropzone">
+      <h3>📦 Drop a skill package here</h3>
+      <p>zip or tar.gz — or click to browse</p>
+      <input type="file" id="fileInput" accept=".zip,.tar.gz,.tgz">
+    </div>
+    <div class="or">— or scan from URL —</div>
+    <div class="url-row">
+      <input type="text" id="urlInput" placeholder="https://github.com/user/skill-repo">
+      <button class="btn" id="scanBtn" onclick="scanUrl()">Scan</button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>Scanning skill for security issues...</p>
+  </div>
+
+  <div class="results" id="results">
+    <div class="score-card">
+      <div class="score-ring">
+        <svg viewBox="0 0 140 140" width="140" height="140">
+          <circle class="bg" cx="70" cy="70" r="62"/>
+          <circle class="fg" id="scoreArc" cx="70" cy="70" r="62" stroke-dasharray="389.56" stroke-dashoffset="389.56"/>
+        </svg>
+        <div class="score-num" id="scoreNum">0</div>
+      </div>
+      <div class="grade" id="gradeLabel">—</div>
+      <div class="stats">
+        <span><b id="statFiles">0</b> files</span>
+        <span><b id="statDanger">0</b> danger</span>
+        <span><b id="statWarn">0</b> warnings</span>
+      </div>
+    </div>
+    <div class="findings" id="findings"></div>
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn" onclick="reset()" style="background:var(--surface2);color:var(--text)">Scan another</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <a href="https://github.com/stevenxxzg-master/skill-audit">GitHub</a> · MIT License
+</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const dropzone = $('#dropzone');
+const fileInput = $('#fileInput');
+
+// Theme
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+
+// Drag & drop
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); if(e.dataTransfer.files[0]) scanFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => { if(fileInput.files[0]) scanFile(fileInput.files[0]); });
+
+function show(id) { ['upload-section','loading','results'].forEach(s => { $(('#'+s)).style.display = s===id ? '' : 'none'; }); }
+
+async function scanFile(file) {
+  show('loading');
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch('/api/scan', { method: 'POST', body: form });
+    if (!res.ok) throw new Error(await res.text());
+    render(await res.json());
+  } catch(e) { alert('Scan failed: ' + e.message); show('upload-section'); }
+}
+
+async function scanUrl() {
+  const url = $('#urlInput').value.trim();
+  if (!url) return;
+  show('loading');
+  try {
+    const res = await fetch('/api/scan-url', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) });
+    if (!res.ok) throw new Error(await res.text());
+    render(await res.json());
+  } catch(e) { alert('Scan failed: ' + e.message); show('upload-section'); }
+}
+
+function render(report) {
+  show('results');
+  const score = report.score?.score ?? 100;
+  const grade = report.score?.grade ?? 'A';
+  const findings = report.findings || [];
+  const summary = report.summary || {};
+
+  // Animate score ring
+  const arc = $('#scoreArc');
+  const circumference = 389.56;
+  const color = {A:'#22c55e',B:'#84cc16',C:'#f59e0b',D:'#f97316',F:'#ef4444'}[grade];
+  arc.style.stroke = color;
+  setTimeout(() => { arc.style.strokeDashoffset = circumference - (circumference * score / 100); }, 50);
+
+  // Animate number
+  let cur = 0;
+  const step = Math.max(1, Math.floor(score / 30));
+  const iv = setInterval(() => { cur = Math.min(cur + step, score); $('#scoreNum').textContent = cur; if(cur >= score) clearInterval(iv); }, 30);
+
+  // Grade
+  const gl = $('#gradeLabel');
+  gl.textContent = 'Grade: ' + grade;
+  gl.className = 'grade grade-' + grade;
+
+  // Stats
+  $('#statFiles').textContent = summary.files || 0;
+  $('#statDanger').textContent = summary.danger || 0;
+  $('#statWarn').textContent = summary.warn || 0;
+
+  // Findings
+  const container = $('#findings');
+  container.innerHTML = '';
+  if (findings.length === 0) {
+    container.innerHTML = '<div class="empty">✓ No security issues found</div>';
+    return;
+  }
+
+  const byFile = {};
+  findings.forEach(f => { (byFile[f.file] = byFile[f.file] || []).push(f); });
+
+  Object.entries(byFile).forEach(([file, items]) => {
+    const group = document.createElement('div');
+    group.className = 'file-group';
+    const dangers = items.filter(i => i.severity === 'danger').length;
+    const warns = items.filter(i => i.severity === 'warn').length;
+    group.innerHTML = `<div class="file-header" onclick="this.parentElement.classList.toggle('collapsed')">
+      <span>${file}</span>
+      <span class="count">${dangers ? dangers + ' danger' : ''} ${warns ? warns + ' warn' : ''}</span>
+    </div>`;
+    const body = document.createElement('div');
+    body.className = 'file-body';
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'finding';
+      div.innerHTML = `<div class="finding-head">
+        <span class="sev sev-${item.severity}"></span>
+        <span class="finding-line">L${item.line}</span>
+        <span class="finding-msg">${esc(item.msg)}</span>
+      </div>
+      ${item.snippet ? `<div class="finding-snippet">${esc(item.snippet)}</div>` : ''}
+      ${item.suggestion ? `<div class="finding-fix">💡 ${esc(item.suggestion)}</div>` : ''}`;
+      body.appendChild(div);
+    });
+    group.appendChild(body);
+    container.appendChild(group);
+  });
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function reset() { show('upload-section'); $('#urlInput').value = ''; fileInput.value = ''; }
+</script>
+</body>
+</html>

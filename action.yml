@@ -1,0 +1,53 @@
+name: 'skill-audit'
+description: 'Security scanner for AI agent skills'
+
+inputs:
+  path:
+    description: 'Path to the skill directory to scan'
+    required: false
+    default: '.'
+  threshold:
+    description: 'Minimum passing score (0-100). Fails if score is below this.'
+    required: false
+    default: '0'
+  fail-on-danger:
+    description: 'Fail the action if any danger-level findings are detected'
+    required: false
+    default: 'true'
+  format:
+    description: 'Output format: text, json, or markdown'
+    required: false
+    default: 'text'
+
+outputs:
+  score:
+    description: 'Security score (0-100)'
+    value: ${{ steps.audit.outputs.score }}
+  grade:
+    description: 'Letter grade (A-F)'
+    value: ${{ steps.audit.outputs.grade }}
+  findings-count:
+    description: 'Total number of findings'
+    value: ${{ steps.audit.outputs.findings-count }}
+  report-path:
+    description: 'Path to the generated report file'
+    value: ${{ steps.audit.outputs.report-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Run skill-audit
+      id: audit
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_THRESHOLD: ${{ inputs.threshold }}
+        INPUT_FAIL_ON_DANGER: ${{ inputs.fail-on-danger }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: node ${{ github.action_path }}/action/entrypoint.js
