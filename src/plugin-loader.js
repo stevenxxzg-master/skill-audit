@@ -1,3 +1,10 @@
+/**
+ * @file plugin-loader.js
+ * @description Dynamic plugin loader for custom audit rules
+ * @license MIT
+ */
+
+// skill-audit-ignore-next-line
 import { readdir } from 'fs/promises';
 import { join, extname } from 'path';
 import { pathToFileURL } from 'url';

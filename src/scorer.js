@@ -1,3 +1,9 @@
+/**
+ * @file scorer.js
+ * @description Security score calculator — converts findings to score/grade
+ * @license MIT
+ */
+
 const DEDUCTIONS = { danger: 15, warn: 5 };
 
 function getGrade(score) {

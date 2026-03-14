@@ -1,3 +1,10 @@
+/**
+ * @file config.js
+ * @description Configuration file loader for .skill-audit.json
+ * @license MIT
+ */
+
+// skill-audit-ignore-next-line
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { pathToFileURL } from 'url';

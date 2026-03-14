@@ -1,71 +1,62 @@
-import { calculateScore } from './scorer.js';
-import { getSuggestion } from './fixer.js';
+/**
+ * @file html-reporter.js
+ * @description HTML report generator — produces a standalone HTML audit report
+ * @license MIT
+ */
+
+import { calculateScore } from './scorer.js'
+import { getSuggestion } from './fixer.js'
+import { groupByFile, scoreHexColor, gradeLabel } from './report-utils.js'
 
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function scoreColor(score) {
-  if (score >= 70) return '#2da44e';
-  if (score >= 40) return '#bf8700';
-  return '#cf222e';
-}
-
-function gradeLabel(grade) {
-  const map = { A: 'Excellent', B: 'Good', C: 'Fair', D: 'Poor', F: 'Critical' };
-  return map[grade] || '';
+    .replace(/"/g, '&quot;')
 }
 
 function severityIcon(severity) {
-  if (severity === 'danger') return `<span class="sev-icon sev-danger" title="Danger">✗</span>`;
-  if (severity === 'warn') return `<span class="sev-icon sev-warn" title="Warning">⚠</span>`;
-  return `<span class="sev-icon sev-pass" title="Pass">✓</span>`;
+  if (severity === 'danger') return `<span class="sev-icon sev-danger" title="Danger">✗</span>`
+  if (severity === 'warn') return `<span class="sev-icon sev-warn" title="Warning">⚠</span>`
+  return `<span class="sev-icon sev-pass" title="Pass">✓</span>`
 }
 
 export function generateHtml(report, options = {}) {
-  const { findings, summary, target } = report;
-  const lang = options.lang || 'en';
-  const { score, grade, breakdown } = calculateScore(findings);
-  const scanTime = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
-  const color = scoreColor(score);
+  const { findings, summary, target } = report
+  const lang = options.lang || 'en'
+  const { score, grade, breakdown } = calculateScore(findings)
+  const scanTime = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
+  const color = scoreHexColor(score)
 
-  // Group findings by file
-  const byFile = new Map();
-  for (const f of findings) {
-    if (!byFile.has(f.file)) byFile.set(f.file, []);
-    byFile.get(f.file).push(f);
-  }
+  const byFile = groupByFile(findings)
 
   // Build findings HTML
-  let findingsHtml = '';
+  let findingsHtml = ''
   if (findings.length === 0) {
-    findingsHtml = `<div class="empty-state"><span class="empty-icon">✓</span><p>No issues found. This skill looks clean.</p></div>`;
+    findingsHtml = `<div class="empty-state"><span class="empty-icon">✓</span><p>No issues found. This skill looks clean.</p></div>`
   } else {
     for (const [file, items] of byFile) {
-      findingsHtml += `<div class="file-group">`;
-      findingsHtml += `<div class="file-header"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/></svg> ${escapeHtml(file)}</div>`;
+      findingsHtml += `<div class="file-group">`
+      findingsHtml += `<div class="file-header"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/></svg> ${escapeHtml(file)}</div>`
       for (const item of items) {
-        const suggestion = getSuggestion(item.rule);
-        findingsHtml += `<div class="finding finding-${item.severity}">`;
-        findingsHtml += `<div class="finding-header">${severityIcon(item.severity)}<span class="finding-line">L${item.line}</span><span class="finding-msg">${escapeHtml(item.msg)}</span><span class="finding-rule">${escapeHtml(item.rule)}</span></div>`;
+        const suggestion = getSuggestion(item.rule)
+        findingsHtml += `<div class="finding finding-${item.severity}">`
+        findingsHtml += `<div class="finding-header">${severityIcon(item.severity)}<span class="finding-line">L${item.line}</span><span class="finding-msg">${escapeHtml(item.msg)}</span><span class="finding-rule">${escapeHtml(item.rule)}</span></div>`
         if (item.snippet) {
-          findingsHtml += `<pre class="finding-snippet"><code>${escapeHtml(item.snippet)}</code></pre>`;
+          findingsHtml += `<pre class="finding-snippet"><code>${escapeHtml(item.snippet)}</code></pre>`
         }
-        findingsHtml += `<div class="finding-fix">💡 ${escapeHtml(suggestion[lang] || suggestion.en)}</div>`;
-        findingsHtml += `</div>`;
+        findingsHtml += `<div class="finding-fix">💡 ${escapeHtml(suggestion[lang] || suggestion.en)}</div>`
+        findingsHtml += `</div>`
       }
-      findingsHtml += `</div>`;
+      findingsHtml += `</div>`
     }
   }
 
-  const ruleCount = 7; // number of rule modules
-  const dangerBadge = summary.danger > 0 ? `<span class="stat-badge stat-danger">${summary.danger} danger</span>` : '';
-  const warnBadge = summary.warn > 0 ? `<span class="stat-badge stat-warn">${summary.warn} warning</span>` : '';
-  const passBadge = findings.length === 0 ? `<span class="stat-badge stat-pass">all clear</span>` : '';
+  const ruleCount = 7
+  const dangerBadge = summary.danger > 0 ? `<span class="stat-badge stat-danger">${summary.danger} danger</span>` : ''
+  const warnBadge = summary.warn > 0 ? `<span class="stat-badge stat-warn">${summary.warn} warning</span>` : ''
+  const passBadge = findings.length === 0 ? `<span class="stat-badge stat-pass">all clear</span>` : ''
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -430,5 +421,5 @@ function toggleTheme(){
 }
 </script>
 </body>
-</html>`;
+</html>`
 }

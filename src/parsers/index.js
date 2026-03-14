@@ -1,5 +1,8 @@
-// Auto-detect skill format and parse manifest
-// Unified entry point for all parsers
+/**
+ * @file parsers/index.js
+ * @description Auto-detect skill format and parse manifest
+ * @license MIT
+ */
 
 import * as openclaw from './openclaw.js';
 import * as langchain from './langchain.js';

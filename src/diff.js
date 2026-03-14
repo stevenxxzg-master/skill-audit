@@ -1,3 +1,9 @@
+/**
+ * @file diff.js
+ * @description Report diff engine — compare two scan reports
+ * @license MIT
+ */
+
 import { calculateScore } from './scorer.js';
 
 const LINE_TOLERANCE = 3;

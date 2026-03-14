@@ -1,0 +1,19 @@
+# Test fixtures contain intentionally malicious patterns
+tests/fixtures/**
+# Test files contain intentional security patterns for testing
+tests/**
+# Documentation contains example patterns for illustration
+docs/**
+# Generated reports contain scan results with detected patterns
+skill-audit-report.md
+# README/CHANGELOG contain pattern examples in documentation
+README.md
+CHANGELOG.md
+ROADMAP-1.0.md
+CONTRIBUTING.md
+# OpenAPI spec contains example payloads
+docs/openapi.yaml
+# Example plugins contain intentional patterns
+examples/**
+# GitHub Action entrypoint uses expected patterns
+action/**

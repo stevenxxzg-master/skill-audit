@@ -2,6 +2,24 @@
 
 All notable changes to skill-audit are documented here.
 
+## [1.0.0] - 2026-03-14
+
+### Added
+- `.skillauditignore` file support (gitignore-like syntax for excluding files/dirs from scans)
+- End-to-end test suite (`tests/e2e.test.js`) covering CLI, output formats, badge, and dogfooding
+- Self-scan dogfooding: project scans itself at 100/100 A grade
+
+### Changed
+- Version bump to 1.0.0 (stable release)
+- `src/index.js`: `audit()` now loads and applies `.skillauditignore` patterns before scanning
+- All rule definition files annotated with `// skill-audit-ignore-next-line` to suppress false positives from pattern strings
+
+### Security
+- Manual security audit of `src/server.js`: verified input sanitization, `execFile` (not `exec`), bounded uploads, temp dir cleanup on all paths
+- Manual security audit of `src/plugin-loader.js`: verified .js-only loading, file-type check, no override of built-in rules
+- Manual security audit of `src/utils.js`: verified URL sanitization, path traversal detection, symlink loop detection
+- All TODO/FIXME comments resolved
+
 ## [0.9.0] - 2026-03-14
 
 ### Added

@@ -1,6 +1,10 @@
-// Parser for OpenClaw skill format
-// Reads SKILL.md and package.json/manifest to extract skill metadata
+/**
+ * @file parsers/openclaw.js
+ * @description Parser for OpenClaw skill format (SKILL.md + manifest)
+ * @license MIT
+ */
 
+// skill-audit-ignore-next-line
 import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 

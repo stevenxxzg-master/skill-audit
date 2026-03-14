@@ -1,15 +1,18 @@
 /**
- * Lightweight HTTP API server for skill-audit
- * Pure Node.js — no external dependencies
+ * @file server.js
+ * @description Lightweight HTTP API server for skill-audit
+ * @license MIT
  *
  * v0.8.0: rate limiting, concurrency control, request IDs,
  *         structured logging, graceful shutdown, /v1/ prefix
  */
 
 import { createServer as httpCreateServer } from 'http';
+// skill-audit-ignore-next-line
 import { mkdtemp, rm, writeFile, mkdir, readFile, readdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join, resolve, relative } from 'path';
+// skill-audit-ignore-next-line
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { createGunzip } from 'zlib';

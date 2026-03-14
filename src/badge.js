@@ -1,6 +1,7 @@
 /**
- * SVG badge generator — shields.io style
- * Generates badges like: skill-audit | A 100
+ * @file badge.js
+ * @description SVG badge generator — shields.io style score badges
+ * @license MIT
  */
 
 const GRADE_COLORS = {

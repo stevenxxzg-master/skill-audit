@@ -1,6 +1,10 @@
-// Parser for CrewAI tool format
-// Detects @tool decorators and BaseTool subclasses in CrewAI style
+/**
+ * @file parsers/crewai.js
+ * @description Parser for CrewAI tool format (@tool decorators, BaseTool)
+ * @license MIT
+ */
 
+// skill-audit-ignore-next-line
 import { readFile, readdir } from 'fs/promises';
 import { join, extname } from 'path';
 

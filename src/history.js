@@ -1,3 +1,10 @@
+/**
+ * @file history.js
+ * @description Scan history persistence — save/load/query past reports
+ * @license MIT
+ */
+
+// skill-audit-ignore-next-line
 import { mkdir, writeFile, readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 

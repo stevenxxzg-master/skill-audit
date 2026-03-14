@@ -1,3 +1,9 @@
+/**
+ * @file fixer.js
+ * @description Fix suggestions for each rule — multilingual (en/zh)
+ * @license MIT
+ */
+
 const SUGGESTIONS = {
   // dangerous-commands/*
   'dangerous-commands/rm-force': {
@@ -9,23 +15,34 @@ const SUGGESTIONS = {
     zh: '递归删除有风险。优先使用 trash-cli 或在删除前验证路径。',
   },
   'dangerous-commands/eval': {
+    // skill-audit-ignore-next-line
     en: 'Replace eval() with safer alternatives like JSON.parse() or a sandboxed interpreter.',
+    // skill-audit-ignore-next-line
     zh: '用 JSON.parse() 或沙箱解释器替代 eval()。',
   },
   'dangerous-commands/exec-call': {
+    // skill-audit-ignore-next-line
     en: 'Use execFile() with explicit args instead of exec() to prevent shell injection.',
+    // skill-audit-ignore-next-line
     zh: '使用 execFile() 并显式传参，避免 exec() 的 shell 注入风险。',
   },
   'dangerous-commands/child-process': {
+    // skill-audit-ignore-next-line
     en: 'Ensure child_process calls use fixed commands, not user-controlled input.',
+    // skill-audit-ignore-next-line
     zh: '确保 child_process 调用使用固定命令，而非用户可控输入。',
   },
+  // skill-audit-ignore-next-line
   'dangerous-commands/subprocess': {
+    // skill-audit-ignore-next-line
     en: 'Validate all subprocess arguments. Avoid shell=True with user input.',
+    // skill-audit-ignore-next-line
     zh: '验证所有 subprocess 参数。避免对用户输入使用 shell=True。',
   },
   'dangerous-commands/os-system': {
+    // skill-audit-ignore-next-line
     en: 'Replace os.system() with subprocess.run() and explicit argument lists.',
+    // skill-audit-ignore-next-line
     zh: '用 subprocess.run() 和显式参数列表替代 os.system()。',
   },
   'dangerous-commands/chmod-world': {
@@ -36,6 +53,7 @@ const SUGGESTIONS = {
     en: 'Prefer SIGTERM (kill -15) before SIGKILL to allow graceful shutdown.',
     zh: '优先使用 SIGTERM (kill -15) 以允许进程优雅退出。',
   },
+  // skill-audit-ignore-next-line
   'dangerous-commands/mkfs': {
     en: 'Filesystem format commands are destructive. Add explicit confirmation guards.',
     zh: '格式化文件系统命令具有破坏性。添加明确的确认保护。',
@@ -49,15 +67,22 @@ const SUGGESTIONS = {
     zh: '直接写入块设备极其危险。添加安全防护。',
   },
   'dangerous-commands/function-constructor': {
+    // skill-audit-ignore-next-line
     en: 'Avoid new Function(). Use static code paths or a sandboxed evaluator.',
+    // skill-audit-ignore-next-line
     zh: '避免 new Function()。使用静态代码路径或沙箱求值器。',
   },
   'dangerous-commands/dunder-import': {
+    // skill-audit-ignore-next-line
     en: 'Avoid dynamic __import__(). Use explicit static imports.',
+    // skill-audit-ignore-next-line
     zh: '避免动态 __import__()。使用显式静态导入。',
   },
+  // skill-audit-ignore-next-line
   'dangerous-commands/importlib': {
+    // skill-audit-ignore-next-line
     en: 'Validate module names when using importlib to prevent arbitrary code loading.',
+    // skill-audit-ignore-next-line
     zh: '使用 importlib 时验证模块名，防止加载任意代码。',
   },
 
@@ -109,6 +134,7 @@ const SUGGESTIONS = {
 
   // prompt-injection/*
   'prompt-injection/ignore-prev': {
+    // skill-audit-ignore-next-line
     en: 'Remove or sanitize "ignore previous instructions" patterns. This is a known injection vector.',
     zh: '移除或清理「忽略之前指令」模式。这是已知的注入向量。',
   },
@@ -154,6 +180,7 @@ const SUGGESTIONS = {
   },
 
   // suspicious-network/*
+  // skill-audit-ignore-next-line
   'suspicious-network/curl-pipe-shell': {
     en: 'Never pipe curl to shell. Download first, verify, then execute.',
     zh: '不要将 curl 管道到 shell。先下载、验证，再执行。',
@@ -171,7 +198,9 @@ const SUGGESTIONS = {
     zh: '审查 fetch POST 调用。验证目标 URL 和载荷内容。',
   },
   'suspicious-network/requests-post': {
+    // skill-audit-ignore-next-line
     en: 'Audit requests.post() calls. Verify data is not being exfiltrated.',
+    // skill-audit-ignore-next-line
     zh: '审计 requests.post() 调用。验证数据未被外泄。',
   },
   'suspicious-network/raw-ip': {
@@ -179,7 +208,9 @@ const SUGGESTIONS = {
     zh: '用域名替代原始 IP 地址。原始 IP 可能指向 C2 服务器。',
   },
   'suspicious-network/tunnel': {
+    // skill-audit-ignore-next-line
     en: 'Remove tunnel services (ngrok, etc.). These can expose internal services.',
+    // skill-audit-ignore-next-line
     zh: '移除隧道服务（ngrok 等）。这些可暴露内部服务。',
   },
   'suspicious-network/paste-service': {

@@ -1,34 +1,43 @@
-// Permission audit: checks SKILL.md or manifest for declared permissions
-// vs actual usage patterns in code files
+/**
+ * @file rules/permission-audit.js
+ * @description Check declared permissions vs actual usage patterns
+ * @license MIT
+ */
 
 const PERMISSION_INDICATORS = {
+  // skill-audit-ignore-next-line
   filesystem: [/readFile|writeFile|readdir|mkdir|unlink|fs\.|open\(|with\s+open/gi, 'File system access'],
+  // skill-audit-ignore-next-line
   network: [/fetch\(|http\.|https\.|requests\.|urllib|axios|curl|wget/gi, 'Network access'],
+  // skill-audit-ignore-next-line
   exec: [/exec\(|spawn\(|child_process|subprocess|os\.system|os\.popen/gi, 'Command execution'],
+  // skill-audit-ignore-next-line
   env: [/process\.env|os\.environ|getenv|dotenv/gi, 'Environment variable access'],
+  // skill-audit-ignore-next-line
   crypto: [/crypto\.|hashlib|hmac|bcrypt|jwt/gi, 'Cryptographic operations'],
+  // skill-audit-ignore-next-line
   database: [/mongodb|postgres|mysql|redis|sqlite|sequelize|prisma|mongoose/gi, 'Database access'],
-};
+}
 
 export const permissionAudit = {
   id: 'permission-audit',
   name: 'Permission Audit',
-  scan(content, file, _ctx) {
-    const findings = [];
+  scan(content, file, _options) {
+    const findings = []
 
     // Only scan code files for actual usage
-    const codeExts = new Set(['.js', '.ts', '.py', '.sh', '.bash']);
-    if (!codeExts.has(file.ext)) return findings;
+    const codeExts = new Set(['.js', '.ts', '.py', '.sh', '.bash'])
+    if (!codeExts.has(file.ext)) return findings
 
-    const lines = content.split('\n');
-    const detected = new Map();
+    const lines = content.split('\n')
+    const detected = new Map()
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i]
       for (const [perm, [pattern, label]] of Object.entries(PERMISSION_INDICATORS)) {
-        pattern.lastIndex = 0;
+        pattern.lastIndex = 0
         if (pattern.test(line) && !detected.has(perm)) {
-          detected.set(perm, { line: i + 1, snippet: line.trim().slice(0, 120) });
+          detected.set(perm, { line: i + 1, snippet: line.trim().slice(0, 120) })
         }
       }
     }
@@ -41,10 +50,10 @@ export const permissionAudit = {
         line,
         msg: `Uses ${PERMISSION_INDICATORS[perm][1]} — ensure this is declared and necessary`,
         snippet,
-      });
+      })
     }
 
-    return findings;
+    return findings
   },
 
   /**
@@ -56,18 +65,18 @@ export const permissionAudit = {
    */
   compareManifest(manifest, allFindings) {
     if (!manifest || !manifest.declaredPermissions || manifest.declaredPermissions.length === 0) {
-      return [];
+      return []
     }
 
-    const findings = [];
-    const declared = new Set(manifest.declaredPermissions);
+    const findings = []
+    const declared = new Set(manifest.declaredPermissions)
 
     // Collect actual permissions detected across all files
-    const actual = new Set();
+    const actual = new Set()
     for (const f of allFindings) {
       if (f.rule.startsWith('permission-audit/')) {
-        const perm = f.rule.split('/')[1];
-        actual.add(perm);
+        const perm = f.rule.split('/')[1]
+        actual.add(perm)
       }
     }
 
@@ -81,7 +90,7 @@ export const permissionAudit = {
           line: 0,
           msg: `Uses ${PERMISSION_INDICATORS[perm]?.[1] || perm} but not declared in manifest — potential undisclosed capability`,
           snippet: `actual: ${perm}, declared: [${[...declared].join(', ')}]`,
-        });
+        })
       }
     }
 
@@ -95,10 +104,10 @@ export const permissionAudit = {
           line: 0,
           msg: `Declares ${PERMISSION_INDICATORS[perm]?.[1] || perm} permission but doesn't appear to use it — over-declaration`,
           snippet: `declared: ${perm}, not detected in code`,
-        });
+        })
       }
     }
 
-    return findings;
+    return findings
   },
-};
+}

@@ -1,114 +1,105 @@
-import { calculateScore } from './scorer.js';
-import { getSuggestion } from './fixer.js';
+/**
+ * @file markdown-reporter.js
+ * @description Markdown report generator — GitHub-friendly audit report
+ * @license MIT
+ */
 
-function severityEmoji(severity) {
-  if (severity === 'danger') return '🔴';
-  if (severity === 'warn') return '🟡';
-  return '🟢';
-}
+import { calculateScore } from './scorer.js'
+import { getSuggestion } from './fixer.js'
+import { groupByFile, severityEmoji, gradeLabel } from './report-utils.js'
 
 function scoreBadge(score, grade) {
-  const color = score >= 70 ? '2da44e' : score >= 40 ? 'bf8700' : 'cf222e';
-  return `![skill-audit score](https://img.shields.io/badge/skill--audit-${score}%2F100_${grade}-${color})`;
-}
-
-function gradeLabel(grade) {
-  const map = { A: 'Excellent', B: 'Good', C: 'Fair', D: 'Poor', F: 'Critical' };
-  return map[grade] || '';
+  const color = score >= 70 ? '2da44e' : score >= 40 ? 'bf8700' : 'cf222e'
+  return `![skill-audit score](https://img.shields.io/badge/skill--audit-${score}%2F100_${grade}-${color})`
 }
 
 function escapeMarkdown(str) {
-  return String(str).replace(/\|/g, '\\|').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(str).replace(/\|/g, '\\|').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 export function generateMarkdown(report, options = {}) {
-  const { findings, summary } = report;
-  const lang = options.lang || 'en';
-  const { score, grade, breakdown } = calculateScore(findings);
+  const { findings, summary } = report
+  const lang = options.lang || 'en'
+  const { score, grade, breakdown } = calculateScore(findings)
 
-  const lines = [];
+  const lines = []
 
   // Header with badge
-  lines.push(`## 🛡️ skill-audit Report`);
-  lines.push('');
-  lines.push(`${scoreBadge(score, grade)}`);
-  lines.push('');
-  lines.push(`**Score:** ${score}/100 | **Grade:** ${grade} (${gradeLabel(grade)}) | **Files scanned:** ${summary.files}`);
-  lines.push('');
+  lines.push('## 🛡️ skill-audit Report')
+  lines.push('')
+  lines.push(`${scoreBadge(score, grade)}`)
+  lines.push('')
+  lines.push(`**Score:** ${score}/100 | **Grade:** ${grade} (${gradeLabel(grade)}) | **Files scanned:** ${summary.files}`)
+  lines.push('')
 
   // Summary counts
-  const parts = [];
-  if (summary.danger > 0) parts.push(`🔴 ${summary.danger} danger`);
-  if (summary.warn > 0) parts.push(`🟡 ${summary.warn} warning`);
-  if (summary.danger === 0 && summary.warn === 0) parts.push(`🟢 No issues found`);
-  lines.push(parts.join(' · '));
-  lines.push('');
+  const parts = []
+  if (summary.danger > 0) parts.push(`🔴 ${summary.danger} danger`)
+  if (summary.warn > 0) parts.push(`🟡 ${summary.warn} warning`)
+  if (summary.danger === 0 && summary.warn === 0) parts.push('🟢 No issues found')
+  lines.push(parts.join(' · '))
+  lines.push('')
 
   if (findings.length === 0) {
-    lines.push('> ✅ All clear — no security issues detected.');
-    lines.push('');
-    return lines.join('\n');
+    lines.push('> ✅ All clear — no security issues detected.')
+    lines.push('')
+    return lines.join('\n')
   }
 
   // Findings table
-  lines.push('### Findings');
-  lines.push('');
-  lines.push('| Severity | File | Line | Message |');
-  lines.push('|----------|------|------|---------|');
+  lines.push('### Findings')
+  lines.push('')
+  lines.push('| Severity | File | Line | Message |')
+  lines.push('|----------|------|------|---------|')
   for (const f of findings) {
-    const sev = severityEmoji(f.severity);
-    const file = escapeMarkdown(f.file);
-    const msg = escapeMarkdown(f.msg);
-    lines.push(`| ${sev} ${f.severity} | \`${file}\` | ${f.line} | ${msg} |`);
+    const sev = severityEmoji(f.severity)
+    const file = escapeMarkdown(f.file)
+    const msg = escapeMarkdown(f.msg)
+    lines.push(`| ${sev} ${f.severity} | \`${file}\` | ${f.line} | ${msg} |`)
   }
-  lines.push('');
+  lines.push('')
 
   // Collapsible details per finding
-  lines.push('### Details');
-  lines.push('');
+  lines.push('### Details')
+  lines.push('')
 
-  // Group by file
-  const byFile = new Map();
-  for (const f of findings) {
-    if (!byFile.has(f.file)) byFile.set(f.file, []);
-    byFile.get(f.file).push(f);
-  }
+  const byFile = groupByFile(findings)
 
   for (const [file, items] of byFile) {
-    lines.push(`<details>`);
-    lines.push(`<summary><strong>${escapeMarkdown(file)}</strong> (${items.length} finding${items.length > 1 ? 's' : ''})</summary>`);
-    lines.push('');
+    lines.push('<details>')
+    lines.push(`<summary><strong>${escapeMarkdown(file)}</strong> (${items.length} finding${items.length > 1 ? 's' : ''})</summary>`)
+    lines.push('')
     for (const item of items) {
-      lines.push(`#### ${severityEmoji(item.severity)} L${item.line}: ${escapeMarkdown(item.msg)}`);
-      lines.push('');
+      lines.push(`#### ${severityEmoji(item.severity)} L${item.line}: ${escapeMarkdown(item.msg)}`)
+      lines.push('')
       if (item.snippet) {
-        lines.push('```');
-        lines.push(item.snippet);
-        lines.push('```');
-        lines.push('');
+        lines.push('```')
+        lines.push(item.snippet)
+        lines.push('```')
+        lines.push('')
       }
-      const suggestion = getSuggestion(item.rule);
-      lines.push(`> 💡 ${suggestion[lang] || suggestion.en}`);
-      lines.push('');
+      const suggestion = getSuggestion(item.rule)
+      lines.push(`> 💡 ${suggestion[lang] || suggestion.en}`)
+      lines.push('')
     }
-    lines.push('</details>');
-    lines.push('');
+    lines.push('</details>')
+    lines.push('')
   }
 
   // Deductions breakdown
   if (breakdown && breakdown.totalDeduction > 0) {
-    lines.push('---');
-    lines.push('');
-    lines.push(`**Deductions:** `);
-    const deductParts = [];
-    if (breakdown.danger.count > 0) deductParts.push(`${breakdown.danger.count} danger (−${breakdown.danger.deduction})`);
-    if (breakdown.warn.count > 0) deductParts.push(`${breakdown.warn.count} warning (−${breakdown.warn.deduction})`);
-    lines.push(deductParts.join(', '));
-    lines.push('');
+    lines.push('---')
+    lines.push('')
+    lines.push('**Deductions:** ')
+    const deductParts = []
+    if (breakdown.danger.count > 0) deductParts.push(`${breakdown.danger.count} danger (−${breakdown.danger.deduction})`)
+    if (breakdown.warn.count > 0) deductParts.push(`${breakdown.warn.count} warning (−${breakdown.warn.deduction})`)
+    lines.push(deductParts.join(', '))
+    lines.push('')
   }
 
-  lines.push(`<sub>Generated by <a href="https://github.com/anthropics/skill-audit">skill-audit</a></sub>`);
-  lines.push('');
+  lines.push('<sub>Generated by <a href="https://github.com/anthropics/skill-audit">skill-audit</a></sub>')
+  lines.push('')
 
-  return lines.join('\n');
+  return lines.join('\n')
 }

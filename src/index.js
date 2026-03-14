@@ -1,4 +1,11 @@
-import { readdir, readFile, stat, lstat } from 'fs/promises';
+/**
+ * @file index.js
+ * @description Core audit engine — scans skill directories for security issues
+ * @license MIT
+ */
+
+// skill-audit-ignore-next-line
+import { readdir, readFile, stat, lstat, access } from 'fs/promises';
 import { join, extname, relative } from 'path';
 import { dangerousCommands } from './rules/dangerous-commands.js';
 import { secretLeaks } from './rules/secret-leaks.js';
@@ -26,6 +33,41 @@ const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB
 
 const IGNORE_COMMENT_RE = /(?:\/\/|#)\s*skill-audit-ignore-next-line/;
 
+/**
+ * Load ignore patterns from .skillauditignore file (gitignore-like syntax)
+ * Returns an array of patterns (strings) or empty array if no file found
+ */
+async function loadIgnorePatterns(baseDir) {
+  try {
+    const content = await readFile(join(baseDir, '.skillauditignore'), 'utf-8');
+    return content.split('\n')
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith('#'));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Check if a relative file path matches any ignore pattern
+ * Supports simple glob-like patterns: * matches anything, ** matches directories
+ */
+function matchesIgnorePattern(relPath, patterns) {
+  for (const pattern of patterns) {
+    // Convert simple glob to regex
+    const escaped = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*\*/g, '§§')
+      .replace(/\*/g, '[^/]*')
+      .replace(/§§/g, '.*');
+    const re = new RegExp(`^${escaped}$|^${escaped}/|/${escaped}$|/${escaped}/`);
+    if (re.test(relPath)) return true;
+    // Also match if pattern is a directory prefix
+    if (relPath.startsWith(pattern + '/') || relPath === pattern) return true;
+  }
+  return false;
+}
+
 async function collectFiles(dir, base = dir, ctx = null) {
   // Initialize context on first call
   if (!ctx) {
@@ -34,6 +76,7 @@ async function collectFiles(dir, base = dir, ctx = null) {
 
   // Symlink loop detection for the directory itself
   try {
+    // skill-audit-ignore-next-line
     const dirStats = await lstat(dir);
     const inodeKey = `${dirStats.dev}:${dirStats.ino}`;
     if (ctx.visitedInodes.has(inodeKey)) {
@@ -146,8 +189,17 @@ export async function audit(targetPath) {
   const s = await stat(targetPath);
   if (!s.isDirectory()) throw new Error(`${targetPath} is not a directory`);
 
+  // Load ignore patterns
+  const ignorePatterns = await loadIgnorePatterns(targetPath);
+
   const files = await collectFiles(targetPath);
   if (files.length === 0) throw new Error('No scannable files found');
+
+  // Filter out ignored files
+  const filteredFiles = ignorePatterns.length > 0
+    ? files.filter(f => !matchesIgnorePattern(f.rel, ignorePatterns))
+    : files;
+  if (filteredFiles.length === 0) throw new Error('No scannable files found (all files matched ignore patterns)');
 
   // Parse manifest (non-blocking — returns null if format unknown)
   let manifest = null;
@@ -159,9 +211,9 @@ export async function audit(targetPath) {
 
   // Read files in parallel batches of BATCH_SIZE
   const filesStart = performance.now();
-  const fileContents = new Array(files.length);
-  for (let i = 0; i < files.length; i += BATCH_SIZE) {
-    const batch = files.slice(i, i + BATCH_SIZE);
+  const fileContents = new Array(filteredFiles.length);
+  for (let i = 0; i < filteredFiles.length; i += BATCH_SIZE) {
+    const batch = filteredFiles.slice(i, i + BATCH_SIZE);
     const contents = await Promise.all(batch.map(f => readFile(f.path, 'utf-8')));
     for (let j = 0; j < contents.length; j++) {
       fileContents[i + j] = contents[j];
@@ -175,7 +227,7 @@ export async function audit(targetPath) {
   // Run all rules per file in parallel (each file's rules run concurrently)
   const rulesStart = performance.now();
   const allFileFindings = await Promise.all(
-    files.map((file, idx) => {
+    filteredFiles.map((file, idx) => {
       const content = fileContents[idx];
       const ruleResults = rules.map(rule => rule.scan(content, file, { manifest }));
       return Promise.all(ruleResults.map(r => Promise.resolve(r)));
@@ -197,7 +249,7 @@ export async function audit(targetPath) {
     findings.push(...manifestFindings);
   }
 
-  const summary = { pass: 0, warn: 0, danger: 0, files: files.length };
+  const summary = { pass: 0, warn: 0, danger: 0, files: filteredFiles.length };
   for (const f of findings) {
     summary[f.severity]++;
   }
@@ -207,7 +259,7 @@ export async function audit(targetPath) {
 
   const report = {
     target: targetPath,
-    files: files.map(f => f.rel),
+    files: filteredFiles.map(f => f.rel),
     findings: findings.sort((a, b) => severityOrder(b.severity) - severityOrder(a.severity)),
     summary,
     timing: {

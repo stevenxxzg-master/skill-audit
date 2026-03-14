@@ -1,6 +1,10 @@
-// Parser for LangChain tool format
-// Detects BaseTool subclasses, tool definitions with name/description/args_schema
+/**
+ * @file parsers/langchain.js
+ * @description Parser for LangChain tool format (BaseTool, tool definitions)
+ * @license MIT
+ */
 
+// skill-audit-ignore-next-line
 import { readFile, readdir } from 'fs/promises';
 import { join, extname } from 'path';
 

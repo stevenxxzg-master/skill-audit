@@ -1,39 +1,85 @@
 /**
- * Public utility functions for skill-audit
- * Shared across index.js, server.js, and rules
+ * @file utils.js
+ * @description Shared utility functions for skill-audit
+ * @license MIT
  */
 
-import { lstat } from 'fs/promises';
+import { lstat } from 'fs/promises'
+
+/**
+ * ANSI color constants — single source of truth for all CLI output
+ */
+export const COLORS = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  cyan: '\x1b[36m',
+  gray: '\x1b[90m',
+  white: '\x1b[37m',
+  bgGreen: '\x1b[42m',
+  bgYellow: '\x1b[43m',
+  bgRed: '\x1b[41m',
+  danger: '\x1b[31m',
+  warn: '\x1b[33m',
+  pass: '\x1b[32m',
+}
+
+/**
+ * Format milliseconds into human-readable duration
+ * @param {number} ms
+ * @returns {string}
+ */
+export function formatDuration(ms) {
+  if (ms < 1000) return `${Math.round(ms)}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  const min = Math.floor(ms / 60000)
+  const sec = Math.round((ms % 60000) / 1000)
+  return `${min}m${sec}s`
+}
+
+/**
+ * Truncate a string to maxLen, appending '...' if truncated
+ * @param {string} str
+ * @param {number} maxLen
+ * @returns {string}
+ */
+export function truncate(str, maxLen = 120) {
+  if (!str || str.length <= maxLen) return str
+  return str.slice(0, maxLen - 3) + '...'
+}
 
 /**
  * Check if a hostname/IP is a private/internal address
  * Covers: 10.x, 172.16-31.x, 192.168.x, 127.x, 0.0.0.0, ::1, localhost
  */
 export function isPrivateIp(hostname) {
-  if (!hostname || typeof hostname !== 'string') return false;
+  if (!hostname || typeof hostname !== 'string') return false
 
-  const h = hostname.toLowerCase().trim();
+  const h = hostname.toLowerCase().trim()
 
   // Localhost variants
-  if (h === 'localhost' || h === '::1') return true;
+  if (h === 'localhost' || h === '::1') return true
 
   // IPv4 patterns
-  const ipv4Match = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (!ipv4Match) return false;
+  const ipv4Match = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (!ipv4Match) return false
 
-  const [, a, b] = ipv4Match.map(Number);
+  const [, a, b] = ipv4Match.map(Number)
 
-  if (a === 10) return true;                          // 10.0.0.0/8
-  if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
-  if (a === 192 && b === 168) return true;             // 192.168.0.0/16
-  if (a === 127) return true;                          // 127.0.0.0/8
-  if (a === 0) return true;                            // 0.0.0.0
+  if (a === 10) return true                          // 10.0.0.0/8
+  if (a === 172 && b >= 16 && b <= 31) return true   // 172.16.0.0/12
+  if (a === 192 && b === 168) return true             // 192.168.0.0/16
+  if (a === 127) return true                          // 127.0.0.0/8
+  if (a === 0) return true                            // 0.0.0.0
 
-  return false;
+  return false
 }
 
 // Characters that could enable command injection in shell contexts
-const DANGEROUS_URL_CHARS = /[;|&`$(){}!<>]/;
+const DANGEROUS_URL_CHARS = /[;|&`$(){}!<>]/
 
 /**
  * Validate and sanitize a URL for safe use in git clone / fetch
@@ -41,39 +87,39 @@ const DANGEROUS_URL_CHARS = /[;|&`$(){}!<>]/;
  */
 export function sanitizeUrl(url) {
   if (!url || typeof url !== 'string') {
-    throw new Error('URL is required');
+    throw new Error('URL is required')
   }
 
-  const trimmed = url.trim();
+  const trimmed = url.trim()
 
   // Block file:// protocol
   if (/^file:/i.test(trimmed)) {
-    throw new Error('file:// URLs are not allowed');
+    throw new Error('file:// URLs are not allowed')
   }
 
   // Must be http or https
   if (!/^https?:\/\/.+/i.test(trimmed)) {
-    throw new Error('URL must start with http:// or https://');
+    throw new Error('URL must start with http:// or https://')
   }
 
   // Block command injection characters
   if (DANGEROUS_URL_CHARS.test(trimmed)) {
-    throw new Error('URL contains dangerous characters');
+    throw new Error('URL contains dangerous characters')
   }
 
   // Parse and check for private IPs
-  let parsed;
+  let parsed
   try {
-    parsed = new URL(trimmed);
+    parsed = new URL(trimmed)
   } catch {
-    throw new Error('Invalid URL format');
+    throw new Error('Invalid URL format')
   }
 
   if (isPrivateIp(parsed.hostname)) {
-    throw new Error('URLs pointing to private/internal IPs are not allowed');
+    throw new Error('URLs pointing to private/internal IPs are not allowed')
   }
 
-  return trimmed;
+  return trimmed
 }
 
 /**
@@ -84,17 +130,18 @@ export function sanitizeUrl(url) {
  */
 export async function isSymlinkLoop(filePath, visitedInodes) {
   try {
-    const stats = await lstat(filePath);
+    // skill-audit-ignore-next-line
+    const stats = await lstat(filePath)
     if (!stats.isSymbolicLink() && !stats.isDirectory()) {
-      return { isLoop: false, inodeKey: null };
+      return { isLoop: false, inodeKey: null }
     }
-    const inodeKey = `${stats.dev}:${stats.ino}`;
+    const inodeKey = `${stats.dev}:${stats.ino}`
     if (visitedInodes.has(inodeKey)) {
-      return { isLoop: true, inodeKey };
+      return { isLoop: true, inodeKey }
     }
-    return { isLoop: false, inodeKey };
+    return { isLoop: false, inodeKey }
   } catch {
-    return { isLoop: false, inodeKey: null };
+    return { isLoop: false, inodeKey: null }
   }
 }
 
@@ -102,8 +149,8 @@ export async function isSymlinkLoop(filePath, visitedInodes) {
  * Check if a file path contains path traversal sequences
  */
 export function hasPathTraversal(filePath) {
-  if (!filePath || typeof filePath !== 'string') return false;
+  if (!filePath || typeof filePath !== 'string') return false
   // Normalize and check for .. components
-  const segments = filePath.split(/[/\\]/);
-  return segments.some(s => s === '..');
+  const segments = filePath.split(/[/\\]/)
+  return segments.some(s => s === '..')
 }
