@@ -1,0 +1,16 @@
+{
+  "name": "skill-audit",
+  "version": "0.1.0",
+  "description": "Security scanner for AI agent skills — detect dangerous commands, secret leaks, prompt injection, and more.",
+  "type": "module",
+  "bin": {
+    "skill-audit": "./bin/cli.js"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test src/**/*.test.js"
+  },
+  "keywords": ["ai", "agent", "skill", "security", "audit", "scanner", "prompt-injection"],
+  "author": "",
+  "license": "MIT"
+}
