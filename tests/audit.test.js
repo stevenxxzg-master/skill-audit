@@ -4,9 +4,11 @@ import { audit } from '../src/index.js';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { execFileSync } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixtures = join(__dirname, 'fixtures');
+const cli = join(__dirname, '..', 'bin', 'cli.js');
 
 describe('audit() integration', () => {
   it('clean skill returns 0 findings', async () => {
@@ -84,5 +86,68 @@ describe('audit() integration', () => {
     assert.ok(ruleIds.has('permission-audit'), 'should detect permission issues');
     assert.ok(ruleIds.has('dependency-audit'), 'should detect dependency issues');
     assert.ok(ruleIds.has('file-system-audit'), 'should detect file system issues');
+  });
+});
+
+// ─── CLI integration tests ───
+
+function runCli(args, expectFail = false) {
+  try {
+    const stdout = execFileSync('node', [cli, ...args], {
+      encoding: 'utf-8',
+      timeout: 10000,
+    });
+    return { stdout, exitCode: 0 };
+  } catch (err) {
+    if (expectFail) {
+      return { stdout: err.stdout || '', stderr: err.stderr || '', exitCode: err.status };
+    }
+    throw err;
+  }
+}
+
+describe('CLI --json output', () => {
+  it('--json output contains score field', () => {
+    const { stdout } = runCli([join(fixtures, 'clean-skill'), '--json']);
+    const json = JSON.parse(stdout);
+    assert.ok('score' in json, 'JSON output should contain score');
+    assert.ok('score' in json.score || typeof json.score.score === 'number' || typeof json.score === 'object',
+      'score should be an object');
+    assert.equal(typeof json.score.score, 'number', 'score.score should be a number');
+    assert.equal(typeof json.score.grade, 'string', 'score.grade should be a string');
+  });
+
+  it('--json output has correct structure', () => {
+    const { stdout } = runCli([join(fixtures, 'clean-skill'), '--json']);
+    const json = JSON.parse(stdout);
+    assert.ok('target' in json, 'should have target');
+    assert.ok('files' in json, 'should have files');
+    assert.ok('findings' in json, 'should have findings');
+    assert.ok('summary' in json, 'should have summary');
+    assert.ok('score' in json, 'should have score');
+  });
+});
+
+describe('CLI exit codes', () => {
+  it('clean skill → exit code 0', () => {
+    const { exitCode } = runCli([join(fixtures, 'clean-skill'), '--json']);
+    assert.equal(exitCode, 0);
+  });
+
+  it('evil skill → exit code 1', () => {
+    const { exitCode } = runCli([join(fixtures, 'evil-skill'), '--json'], true);
+    assert.equal(exitCode, 1);
+  });
+});
+
+describe('CLI error handling', () => {
+  it('empty directory → exit code 2', () => {
+    const { exitCode, stderr } = runCli([join(fixtures, 'empty-skill')], true);
+    assert.equal(exitCode, 2);
+  });
+
+  it('non-existent directory → exit code 2', () => {
+    const { exitCode, stderr } = runCli([join(fixtures, 'does-not-exist')], true);
+    assert.equal(exitCode, 2);
   });
 });

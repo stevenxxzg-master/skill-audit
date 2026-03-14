@@ -7,6 +7,7 @@ import { suspiciousNetwork } from './rules/suspicious-network.js';
 import { permissionAudit } from './rules/permission-audit.js';
 import { dependencyAudit } from './rules/dependency-audit.js';
 import { fileSystemAudit } from './rules/file-system-audit.js';
+import { parseManifest } from './parsers/index.js';
 
 const SCAN_EXTENSIONS = new Set([
   '.js', '.ts', '.py', '.sh', '.bash', '.zsh',
@@ -46,14 +47,28 @@ export async function audit(targetPath) {
   const files = await collectFiles(targetPath);
   if (files.length === 0) throw new Error('No scannable files found');
 
+  // Parse manifest (non-blocking — returns null if format unknown)
+  let manifest = null;
+  try {
+    manifest = await parseManifest(targetPath);
+  } catch {
+    // Manifest parsing failure is non-fatal
+  }
+
   const findings = [];
 
   for (const file of files) {
     const content = await readFile(file.path, 'utf-8');
     for (const rule of rules) {
-      const hits = rule.scan(content, file);
+      const hits = rule.scan(content, file, { manifest });
       findings.push(...hits);
     }
+  }
+
+  // Post-scan: manifest comparison for permission audit
+  if (manifest && permissionAudit.compareManifest) {
+    const manifestFindings = permissionAudit.compareManifest(manifest, findings);
+    findings.push(...manifestFindings);
   }
 
   const summary = { pass: 0, warn: 0, danger: 0, files: files.length };
@@ -62,12 +77,24 @@ export async function audit(targetPath) {
   }
   if (findings.length === 0) summary.pass = 1;
 
-  return {
+  const report = {
     target: targetPath,
     files: files.map(f => f.rel),
     findings: findings.sort((a, b) => severityOrder(b.severity) - severityOrder(a.severity)),
     summary,
   };
+
+  // Include manifest info if available
+  if (manifest) {
+    report.manifest = {
+      format: manifest.format,
+      name: manifest.name,
+      description: manifest.description,
+      declaredPermissions: manifest.declaredPermissions,
+    };
+  }
+
+  return report;
 }
 
 function severityOrder(s) {

@@ -1,6 +1,6 @@
 {
   "name": "skill-audit",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Security scanner for AI agent skills — detect dangerous commands, secret leaks, prompt injection, and more.",
   "type": "module",
   "bin": {
