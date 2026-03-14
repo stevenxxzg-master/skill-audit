@@ -7,6 +7,8 @@ import { suspiciousNetwork } from './rules/suspicious-network.js';
 import { permissionAudit } from './rules/permission-audit.js';
 import { dependencyAudit } from './rules/dependency-audit.js';
 import { fileSystemAudit } from './rules/file-system-audit.js';
+import { encodingAudit } from './rules/encoding-audit.js';
+import { supplyChainAudit } from './rules/supply-chain-audit.js';
 import { parseManifest } from './parsers/index.js';
 
 const SCAN_EXTENSIONS = new Set([
@@ -16,6 +18,7 @@ const SCAN_EXTENSIONS = new Set([
 ]);
 
 const MAX_FILE_SIZE = 512 * 1024; // 512KB
+const BATCH_SIZE = 10;
 
 async function collectFiles(dir, base = dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -38,9 +41,11 @@ async function collectFiles(dir, base = dir) {
   return files;
 }
 
-const rules = [dangerousCommands, secretLeaks, promptInjection, suspiciousNetwork, permissionAudit, dependencyAudit, fileSystemAudit];
+const rules = [dangerousCommands, secretLeaks, promptInjection, suspiciousNetwork, permissionAudit, dependencyAudit, fileSystemAudit, encodingAudit, supplyChainAudit];
 
 export async function audit(targetPath) {
+  const totalStart = performance.now();
+
   const s = await stat(targetPath);
   if (!s.isDirectory()) throw new Error(`${targetPath} is not a directory`);
 
@@ -55,15 +60,30 @@ export async function audit(targetPath) {
     // Manifest parsing failure is non-fatal
   }
 
-  const findings = [];
-
-  for (const file of files) {
-    const content = await readFile(file.path, 'utf-8');
-    for (const rule of rules) {
-      const hits = rule.scan(content, file, { manifest });
-      findings.push(...hits);
+  // Read files in parallel batches of BATCH_SIZE
+  const filesStart = performance.now();
+  const fileContents = new Array(files.length);
+  for (let i = 0; i < files.length; i += BATCH_SIZE) {
+    const batch = files.slice(i, i + BATCH_SIZE);
+    const contents = await Promise.all(batch.map(f => readFile(f.path, 'utf-8')));
+    for (let j = 0; j < contents.length; j++) {
+      fileContents[i + j] = contents[j];
     }
   }
+  const filesMs = performance.now() - filesStart;
+
+  // Run all rules per file in parallel (each file's rules run concurrently)
+  const rulesStart = performance.now();
+  const allFileFindings = await Promise.all(
+    files.map((file, idx) => {
+      const content = fileContents[idx];
+      const ruleResults = rules.map(rule => rule.scan(content, file, { manifest }));
+      return Promise.all(ruleResults.map(r => Promise.resolve(r)));
+    })
+  );
+  const rulesMs = performance.now() - rulesStart;
+
+  const findings = allFileFindings.flat(2);
 
   // Post-scan: manifest comparison for permission audit
   if (manifest && permissionAudit.compareManifest) {
@@ -77,11 +97,18 @@ export async function audit(targetPath) {
   }
   if (findings.length === 0) summary.pass = 1;
 
+  const totalMs = performance.now() - totalStart;
+
   const report = {
     target: targetPath,
     files: files.map(f => f.rel),
     findings: findings.sort((a, b) => severityOrder(b.severity) - severityOrder(a.severity)),
     summary,
+    timing: {
+      totalMs: Math.round(totalMs * 100) / 100,
+      filesMs: Math.round(filesMs * 100) / 100,
+      rulesMs: Math.round(rulesMs * 100) / 100,
+    },
   };
 
   // Include manifest info if available

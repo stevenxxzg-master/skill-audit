@@ -1,5 +1,6 @@
 import { calculateScore } from './scorer.js';
 import { getSuggestion } from './fixer.js';
+import { diffReports } from './diff.js';
 
 const COLORS = {
   danger: '\x1b[31m',
@@ -43,6 +44,7 @@ function gradeColor(grade) {
 export function formatReport(report, options = {}) {
   const { findings, summary, target } = report;
   const lang = options.lang || 'en';
+  const previousReport = options.previousReport || null;
 
   console.log();
   console.log(`${COLORS.bold}  skill-audit${COLORS.reset}  ${COLORS.dim}${target}${COLORS.reset}`);
@@ -54,6 +56,7 @@ export function formatReport(report, options = {}) {
     console.log();
     const { score, grade } = calculateScore(findings);
     printScoreSection(score, grade);
+    if (previousReport) printDiffSection(previousReport, report);
     return;
   }
 
@@ -92,6 +95,9 @@ export function formatReport(report, options = {}) {
   // Score section
   const { score, grade, breakdown } = calculateScore(findings);
   printScoreSection(score, grade, breakdown);
+
+  // Diff section (if previous report available)
+  if (previousReport) printDiffSection(previousReport, report);
 }
 
 function printScoreSection(score, grade, breakdown) {
@@ -106,3 +112,37 @@ function printScoreSection(score, grade, breakdown) {
   }
   console.log();
 }
+
+function printDiffSection(oldReport, newReport) {
+  const diff = diffReports(oldReport, newReport);
+  const { added, fixed, score: scoreDiff, grade: gradeDiff } = diff;
+
+  console.log(`  ${COLORS.bold}Changes vs previous scan${COLORS.reset}`);
+
+  const parts = [];
+  if (added.length > 0) {
+    parts.push(`${COLORS.danger}+${added.length} new issues${COLORS.reset}`);
+  }
+  if (fixed.length > 0) {
+    parts.push(`${COLORS.pass}-${fixed.length} fixed${COLORS.reset}`);
+  }
+  if (parts.length === 0) {
+    parts.push(`${COLORS.dim}no changes${COLORS.reset}`);
+  }
+  console.log(`  ${parts.join('  ')}`);
+
+  // Score change
+  const arrow = scoreDiff.delta > 0 ? `${COLORS.pass}↑${scoreDiff.delta}${COLORS.reset}`
+    : scoreDiff.delta < 0 ? `${COLORS.danger}↓${Math.abs(scoreDiff.delta)}${COLORS.reset}`
+    : `${COLORS.dim}→ no change${COLORS.reset}`;
+  console.log(`  score: ${scoreDiff.old} → ${scoreDiff.new} (${arrow})`);
+
+  // Grade change
+  if (gradeDiff.old !== gradeDiff.new) {
+    const gc = gradeDiff.new < gradeDiff.old ? COLORS.pass : COLORS.danger;
+    console.log(`  grade: ${gradeDiff.old} → ${gc}${gradeDiff.new}${COLORS.reset}`);
+  }
+  console.log();
+}
+
+export { diffReports } from './diff.js';
