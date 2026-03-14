@@ -1,0 +1,558 @@
+openapi: 3.0.3
+info:
+  title: skill-audit API
+  description: |
+    Security scanner for AI agent skills.
+    Detect dangerous commands, secret leaks, prompt injection, suspicious network activity,
+    encoding tricks, and supply chain risks before you install.
+  version: 0.9.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3847
+    description: Local development server
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                version: "0.9.0"
+                uptime: 3600.5
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /v1/health:
+    get:
+      summary: Health check (v1 prefix)
+      operationId: getHealthV1
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/scan:
+    post:
+      summary: Scan uploaded archive
+      operationId: scanUpload
+      tags: [Scan]
+      description: |
+        Upload a `.zip` or `.tar.gz` archive containing a skill directory.
+        Maximum upload size: 10MB.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Archive file (.zip or .tar.gz)
+      responses:
+        '200':
+          description: Scan completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /v1/scan:
+    post:
+      summary: Scan uploaded archive (v1 prefix)
+      operationId: scanUploadV1
+      tags: [Scan]
+      description: Same as `/api/scan`. The `/v1/` prefix is supported for versioned API access.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Scan completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/scan-url:
+    post:
+      summary: Scan a Git repository by URL
+      operationId: scanUrl
+      tags: [Scan]
+      description: |
+        Clone a public Git repository and scan it.
+        Only `http://` and `https://` URLs are allowed.
+        Private/internal IPs and `file://` URLs are blocked.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanUrlRequest'
+            example:
+              url: "https://github.com/user/my-skill"
+      responses:
+        '200':
+          description: Scan completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /v1/scan-url:
+    post:
+      summary: Scan a Git repository by URL (v1 prefix)
+      operationId: scanUrlV1
+      tags: [Scan]
+      description: Same as `/api/scan-url`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanUrlRequest'
+      responses:
+        '200':
+          description: Scan completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/badge:
+    get:
+      summary: Get SVG security badge
+      operationId: getBadge
+      tags: [Badge]
+      description: |
+        Returns a shields.io-style SVG badge.
+        Without query params, uses the last scan result.
+        With `score` and `grade` params, generates a custom badge.
+      parameters:
+        - name: score
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+          description: Security score (0-100). Defaults to last scan result.
+        - name: grade
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [A, B, C, D, F]
+          description: Security grade. Defaults to last scan result.
+      responses:
+        '200':
+          description: SVG badge
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+
+  /v1/badge:
+    get:
+      summary: Get SVG security badge (v1 prefix)
+      operationId: getBadgeV1
+      tags: [Badge]
+      parameters:
+        - name: score
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+        - name: grade
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [A, B, C, D, F]
+      responses:
+        '200':
+          description: SVG badge
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, version, uptime]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        version:
+          type: string
+          example: "0.9.0"
+        uptime:
+          type: number
+          description: Server uptime in seconds
+          example: 3600.5
+
+    ScanUrlRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Public Git repository URL (http/https only)
+          example: "https://github.com/user/my-skill"
+
+    ScanResponse:
+      type: object
+      required: [target, files, findings, summary, score]
+      properties:
+        target:
+          type: string
+          description: Scanned directory path
+        files:
+          type: array
+          items:
+            type: string
+          description: List of scanned file paths (relative)
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+        summary:
+          $ref: '#/components/schemas/Summary'
+        score:
+          $ref: '#/components/schemas/Score'
+        timing:
+          $ref: '#/components/schemas/Timing'
+        manifest:
+          $ref: '#/components/schemas/ManifestInfo'
+
+    Finding:
+      type: object
+      required: [rule, severity, file, line, msg, snippet]
+      properties:
+        rule:
+          type: string
+          description: Rule identifier (e.g. "dangerous-commands/rm-rf")
+          example: "dangerous-commands/rm-rf"
+        severity:
+          type: string
+          enum: [danger, warn]
+          example: danger
+        file:
+          type: string
+          description: Relative file path
+          example: "index.js"
+        line:
+          type: integer
+          description: 1-based line number
+          example: 19
+        msg:
+          type: string
+          description: Human-readable description
+          example: "Forced recursive delete detected"
+        message:
+          type: string
+          description: Alias for msg (some rules use this field)
+        snippet:
+          type: string
+          description: Code snippet (max 120 chars)
+          example: "exec('rm -rf /var/log/*');"
+        fix:
+          type: string
+          description: Fix suggestion (language depends on --lang)
+
+    Summary:
+      type: object
+      required: [pass, warn, danger, files]
+      properties:
+        pass:
+          type: integer
+          description: 1 if no findings, 0 otherwise
+        warn:
+          type: integer
+          description: Number of warn-level findings
+        danger:
+          type: integer
+          description: Number of danger-level findings
+        files:
+          type: integer
+          description: Number of files scanned
+
+    Score:
+      type: object
+      required: [score, grade, breakdown]
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 55
+        grade:
+          type: string
+          enum: [A, B, C, D, F]
+          example: C
+        breakdown:
+          type: object
+          required: [danger, warn, totalDeduction]
+          properties:
+            danger:
+              type: object
+              properties:
+                count:
+                  type: integer
+                deduction:
+                  type: integer
+            warn:
+              type: object
+              properties:
+                count:
+                  type: integer
+                deduction:
+                  type: integer
+            totalDeduction:
+              type: integer
+
+    Timing:
+      type: object
+      properties:
+        totalMs:
+          type: number
+          description: Total scan time in milliseconds
+        filesMs:
+          type: number
+          description: File reading time in milliseconds
+        rulesMs:
+          type: number
+          description: Rule execution time in milliseconds
+
+    ManifestInfo:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [openclaw, langchain, crewai]
+        name:
+          type: string
+        description:
+          type: string
+        declaredPermissions:
+          type: array
+          items:
+            type: string
+
+    DiffResult:
+      type: object
+      properties:
+        added:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+          description: New findings not in old report
+        fixed:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+          description: Findings present in old but not new
+        kept:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+          description: Findings present in both
+        score:
+          type: object
+          properties:
+            old:
+              type: integer
+            new:
+              type: integer
+            delta:
+              type: integer
+              description: Positive = improvement
+        grade:
+          type: object
+          properties:
+            old:
+              type: string
+            new:
+              type: string
+        summary:
+          type: object
+          properties:
+            addedCount:
+              type: integer
+            fixedCount:
+              type: integer
+            keptCount:
+              type: integer
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Error message
+
+  responses:
+    BadRequest:
+      description: Invalid request (missing fields, bad format)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missingBoundary:
+              value:
+                error: "Missing multipart boundary"
+            noFile:
+              value:
+                error: "No file found in upload"
+            invalidJson:
+              value:
+                error: "Invalid JSON"
+            missingUrl:
+              value:
+                error: 'Missing "url" field'
+            unsupportedFormat:
+              value:
+                error: "Unsupported format. Use .zip or .tar.gz"
+
+    RequestTimeout:
+      description: Request processing timed out (30s limit)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Request timeout"
+
+    PayloadTooLarge:
+      description: Upload exceeds 10MB limit
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Upload exceeds 10485760 bytes"
+
+    TooManyRequests:
+      description: Rate limit exceeded (10 req/min/IP)
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Too many requests"
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal server error"
+
+    ServiceUnavailable:
+      description: Server is shutting down or too many concurrent scans
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            shuttingDown:
+              value:
+                error: "Server is shutting down"
+            concurrency:
+              value:
+                error: "Too many concurrent scans. Try again later."
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Scan
+    description: Security scanning endpoints
+  - name: Badge
+    description: SVG badge generation

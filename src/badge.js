@@ -14,6 +14,13 @@ const GRADE_COLORS = {
 const LABEL = 'skill-audit';
 const LABEL_COLOR = '#555';
 
+/**
+ * Generate a shields.io-style SVG security badge.
+ *
+ * @param {number} score - Security score (0-100)
+ * @param {'A'|'B'|'C'|'D'|'F'} grade - Security grade
+ * @returns {string} SVG markup string
+ */
 export function generateBadge(score, grade) {
   const color = GRADE_COLORS[grade] || GRADE_COLORS.F;
   const value = `${grade} ${score}`;

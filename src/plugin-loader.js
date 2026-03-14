@@ -11,6 +11,19 @@ function isValidRule(rule) {
   );
 }
 
+/**
+ * Load custom rule plugins from a directory.
+ *
+ * Each .js file in the directory should export an object with:
+ * - `id` (string) — unique rule identifier
+ * - `name` (string) — human-readable rule name
+ * - `scan` (function) — scan(content, file, ctx?) => Finding[]
+ *
+ * Invalid plugins are skipped with a warning.
+ *
+ * @param {string} pluginDir - Path to the plugin directory
+ * @returns {Promise<Array<{id: string, name: string, scan: Function}>>} Array of valid rule objects
+ */
 export async function loadPlugins(pluginDir) {
   if (!pluginDir) return [];
 

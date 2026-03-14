@@ -11,8 +11,20 @@ function findingKey(f) {
 }
 
 /**
- * Compare two audit reports and return a diff object.
- * Matches findings by rule+file+line (with ±3 line tolerance).
+ * Compare two audit reports and return a diff showing added, fixed, and kept findings.
+ *
+ * Matches findings by rule + file, with ±3 line tolerance for the same finding.
+ *
+ * @param {{findings: Array<{rule: string, severity: string, file: string, line: number}>}} oldReport - Previous scan report
+ * @param {{findings: Array<{rule: string, severity: string, file: string, line: number}>}} newReport - Current scan report
+ * @returns {{
+ *   added: Array<Object>,
+ *   fixed: Array<Object>,
+ *   kept: Array<Object>,
+ *   score: {old: number, new: number, delta: number},
+ *   grade: {old: string, new: string},
+ *   summary: {addedCount: number, fixedCount: number, keptCount: number}
+ * }}
  */
 export function diffReports(oldReport, newReport) {
   const oldFindings = oldReport.findings || [];

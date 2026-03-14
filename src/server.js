@@ -367,6 +367,18 @@ function normalizeRoute(url) {
 
 // ─── Server Factory ───
 
+/**
+ * Create an HTTP server for the skill-audit API.
+ *
+ * Features: rate limiting, concurrency control, request IDs, structured logging,
+ * graceful shutdown, CORS, /v1/ prefix support.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.rateLimit=10] - Max requests per IP per minute
+ * @param {number} [options.rateWindow=60000] - Rate limit window in milliseconds
+ * @param {number} [options.maxConcurrent=3] - Max concurrent scan operations
+ * @returns {import('http').Server} HTTP server instance (call .listen() to start)
+ */
 export function createServer(options = {}) {
   const rateLimiter = new RateLimiter(
     options.rateLimit ?? 10,

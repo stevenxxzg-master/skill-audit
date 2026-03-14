@@ -9,6 +9,19 @@ const DEFAULT_CONFIG = {
   plugins: null,   // plugin directory path
 };
 
+/**
+ * Load skill-audit configuration from file or defaults.
+ *
+ * Resolution order:
+ * 1. Explicit configPath (if provided)
+ * 2. .skillauditrc.json in targetDir
+ * 3. skill-audit.config.js in targetDir
+ * 4. Default config (all rules enabled, no ignores, no plugins)
+ *
+ * @param {string} targetDir - The skill directory being scanned
+ * @param {string} [configPath] - Optional explicit path to a config file (.json or .js)
+ * @returns {Promise<{rules: Record<string, boolean>, severity: Record<string, string>, ignore: string[], plugins: string|null}>}
+ */
 export async function loadConfig(targetDir, configPath) {
   let userConfig = {};
 

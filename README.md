@@ -27,6 +27,28 @@ npx skill-audit ./my-skill
 npm install -g skill-audit
 ```
 
+## Quick Start
+
+```bash
+# 1. 扫描一个 skill 目录
+npx skill-audit ./my-skill
+
+# 2. JSON 输出（CI/CD 集成）
+npx skill-audit ./my-skill --json
+
+# 3. HTML 可视化报告
+npx skill-audit ./my-skill --html
+
+# 4. 编程使用
+node -e "
+import { audit } from 'skill-audit/src/index.js';
+import { calculateScore } from 'skill-audit/src/scorer.js';
+const report = await audit('./my-skill');
+const score = calculateScore(report.findings);
+console.log(score.grade, score.score);
+"
+```
+
 ## What it checks
 
 | Rule | Severity | What it catches |
@@ -40,8 +62,10 @@ npm install -g skill-audit
 | File System Audit | 🔴/🟡 | Sensitive path access (`/etc/shadow`, `~/.ssh`), symlink attacks, `/tmp` usage |
 | Encoding Audit | 🔴/🟡 | Unicode bidi control chars (Trojan Source), zero-width chars, obfuscated base64 |
 | Supply Chain Audit | 🔴/🟡 | `postinstall` scripts, custom npm registries, Dockerfile `curl \| sh` / remote `ADD` |
+| Sandbox Escape | 🔴 danger | Container escape patterns, capability escalation (`CAP_SYS_ADMIN`), namespace operations |
+| Config Audit | 🔴/🟡 | Insecure config: `debug: true`, `CORS *`, TLS/SSL disabled |
 
-共 9 条内置规则，覆盖代码安全、依赖安全、编码安全、供应链安全四大维度。
+共 11 条内置规则，覆盖代码安全、依赖安全、编码安全、供应链安全四大维度。
 
 ## Usage
 
@@ -69,6 +93,11 @@ skill-audit ./path/to/skill --json --lang zh
 | `--json` | Output JSON report (includes score, findings, summary) |
 | `--html` | Generate HTML report with visual score gauge |
 | `--lang zh` | Show fix suggestions in Chinese (default: `en`) |
+| `--verbose` | Show detailed per-rule scan information |
+| `--quiet` | Only output score and grade |
+| `--exit-zero` | Always exit 0 (ignore danger findings) |
+| `--plugins <dir>` | Load custom rules from directory |
+| `--config <path>` | Use specific config file |
 | `-h, --help` | Show help |
 
 ### Exit codes
@@ -302,10 +331,30 @@ export const myRule = {
 
 然后在 `src/index.js` 的 `rules` 数组中注册即可。
 
+## Docker
+
+```bash
+# 构建镜像
+docker build -t skill-audit .
+
+# 运行 API 服务
+docker run -d -p 3847:3847 --read-only --tmpfs /tmp skill-audit
+
+# 或使用 docker-compose
+docker compose up -d
+```
+
+详细部署配置参见 [部署指南](./docs/deployment.md)。
+
 ## Documentation
 
 详细文档请参阅 [`docs/`](./docs/) 目录：
 
+- [🚀 快速开始](./docs/getting-started.md) — 5 分钟上手
+- [⚙️ 配置文件](./docs/configuration.md) — 完整配置说明
+- [🔌 自定义规则](./docs/custom-rules.md) — 规则开发指南
+- [🚢 部署指南](./docs/deployment.md) — Docker 部署
+- [📡 API 规范](./docs/openapi.yaml) — OpenAPI 3.0
 - [📋 规则总览](./docs/rules/index.md) — 所有规则的概览和链接
 - [📊 评分系统](./docs/scoring.md) — 评分算法、等级含义、如何提高分数
 - 各规则详情：
@@ -318,6 +367,8 @@ export const myRule = {
   - [File System Audit](./docs/rules/file-system-audit.md)
   - [Encoding Audit](./docs/rules/encoding-audit.md)
   - [Supply Chain Audit](./docs/rules/supply-chain-audit.md)
+  - [Sandbox Escape](./docs/rules/sandbox-escape.md)
+  - [Config Audit](./docs/rules/config-audit.md)
 
 ## GitHub Action
 
@@ -373,6 +424,11 @@ jobs:
 - ✅ 对比扫描 — Diff 追踪安全问题变化
 - ✅ 编码安全 — Unicode 方向控制字符、零宽字符、Base64 混淆检测
 - ✅ 供应链安全 — Install 脚本、自定义 registry、Dockerfile 远程获取检测
+- ✅ 沙箱逃逸检测 — 容器逃逸、capability 提升、namespace 操作
+- ✅ 配置审计 — 不安全配置检测（debug 模式、CORS *、TLS 禁用）
+- ✅ Docker 支持 — Dockerfile + docker-compose
+- ✅ API 文档 — OpenAPI 3.0 规范
+- ✅ TypeScript 类型声明 — index.d.ts
 - 🔌 Skill 格式适配 — 支持 OpenAI plugins、LangChain tools、MCP 等格式
 - 🌐 在线扫描站点 — 粘贴 URL 即可在线审查 skill
 

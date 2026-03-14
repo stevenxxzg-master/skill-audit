@@ -8,6 +8,15 @@ function getGrade(score) {
   return 'F';
 }
 
+/**
+ * Calculate a security score (0-100) and grade (A-F) from scan findings.
+ *
+ * Scoring: starts at 100, deducts 15 per danger finding and 5 per warn finding.
+ * Minimum score is 0.
+ *
+ * @param {Array<{severity: 'danger'|'warn'}>} findings - Array of scan findings
+ * @returns {{score: number, grade: 'A'|'B'|'C'|'D'|'F', breakdown: {danger: {count: number, deduction: number}, warn: {count: number, deduction: number}, totalDeduction: number}}}
+ */
 export function calculateScore(findings) {
   let dangerCount = 0;
   let warnCount = 0;

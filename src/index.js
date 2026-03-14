@@ -123,6 +123,23 @@ function applyIgnoreFilter(findings, ignoredLines) {
 
 const rules = [dangerousCommands, secretLeaks, promptInjection, suspiciousNetwork, permissionAudit, dependencyAudit, fileSystemAudit, encodingAudit, supplyChainAudit, sandboxEscape, configAudit];
 
+/**
+ * Scan a skill directory for security issues.
+ *
+ * Reads all supported files, runs all built-in rules (and plugin rules if configured),
+ * and returns a structured report with findings, summary, timing, and optional manifest info.
+ *
+ * @param {string} targetPath - Absolute path to the skill directory to scan
+ * @returns {Promise<{
+ *   target: string,
+ *   files: string[],
+ *   findings: Array<{rule: string, severity: 'danger'|'warn', file: string, line: number, msg: string, snippet: string, fix?: string}>,
+ *   summary: {pass: number, warn: number, danger: number, files: number},
+ *   timing: {totalMs: number, filesMs: number, rulesMs: number},
+ *   manifest?: {format: string, name: string, description: string, declaredPermissions: string[]}
+ * }>}
+ * @throws {Error} If targetPath is not a directory or contains no scannable files
+ */
 export async function audit(targetPath) {
   const totalStart = performance.now();
 

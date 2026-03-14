@@ -8,8 +8,12 @@ function historyPath(targetDir) {
 }
 
 /**
- * Save a report to the history directory inside the scanned skill.
- * File format: scan-{timestamp}.json
+ * Save a scan report to the .skill-audit history directory inside the scanned skill.
+ * Creates the directory if it doesn't exist. File format: scan-{timestamp}.json.
+ *
+ * @param {string} targetDir - The scanned skill directory
+ * @param {Object} report - The scan report object to save
+ * @returns {Promise<{path: string, timestamp: number}>} Saved file path and timestamp
  */
 export async function saveReport(targetDir, report) {
   const dir = historyPath(targetDir);
@@ -24,8 +28,10 @@ export async function saveReport(targetDir, report) {
 
 /**
  * Load scan history for a skill directory, sorted newest first.
+ *
  * @param {string} targetDir - The scanned skill directory
- * @param {number} [limit] - Max number of reports to return
+ * @param {number} [limit] - Max number of reports to return (undefined = all)
+ * @returns {Promise<Object[]>} Array of report objects, newest first
  */
 export async function loadHistory(targetDir, limit) {
   const dir = historyPath(targetDir);
@@ -52,7 +58,9 @@ export async function loadHistory(targetDir, limit) {
 
 /**
  * Get the most recent scan report for a skill directory.
- * Returns null if no history exists.
+ *
+ * @param {string} targetDir - The scanned skill directory
+ * @returns {Promise<Object|null>} The latest report, or null if no history exists
  */
 export async function getLatest(targetDir) {
   const history = await loadHistory(targetDir, 1);
